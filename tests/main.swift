@@ -51,5 +51,68 @@ check(r.releases.count == 1 && r.releases[0].version == "1.1", "nouvelle version
 check(r.published.count == 1, "publication de la semaine")
 check(r.markdown(channel: { id in data.channels.first { $0.id == id } }).contains("1.1"), "rapport Markdown")
 
+// Boîte de dépôt : fusion prudente, correspondances, tout ou rien, plan complet, rangement des fichiers
+var box = Sample.make(now: Date())
+let firstPost = box.campaigns[0].posts[0]
+box.campaigns[0].posts[0].notes = "saisi à la main"
+let changes = """
+{"format": "herald-changes", "campaign": "\(box.campaigns[0].name)",
+ "channels": [{"name": "r/macgaming", "kind": "reddit", "url": "https://reddit.com/r/macgaming"}, {"name": "reddit", "notes": "x"}],
+ "watch": [{"url": "https://github.com/owner/tool", "name": "Tool"}, {"url": "https://github.com/OWNER/tool"}],
+ "milestones": [{"title": "Bêta", "date": "2030-01-05", "kind": "teaser"}],
+ "posts": [
+  {"title": "Nouveau post", "date": "2030-01-06 18:30", "channel": "r/macgaming", "milestone": "Bêta", "status": "draft",
+   "drafts": {"fr": "Bonjour", "en": "Hello"}, "feedback": [{"date": "2030-01-07", "kind": "comment", "value": 2, "text": "top"}]},
+  {"id": "\(firstPost.id.uuidString)", "notes": "écrasé ?", "drafts": {"it": "Ciao"}, "link": "https://example.com"}
+ ],
+ "feedback": [{"post": "Nouveau post", "date": "2030-01-07", "kind": "comment", "value": 2, "text": "top"},
+              {"post": "Nouveau post", "date": "2030-01-08", "kind": "downloads", "value": 40}]}
+"""
+let r1 = try! Inbox.merge(Data(changes.utf8), into: &box)
+let np = box.campaigns[0].posts.first { $0.title == "Nouveau post" }
+check(box.channels.contains { $0.name == "r/macgaming" } && box.channels.count == 8, "canal ajouté, nom existant reconnu")
+check(box.watch.count == 1 && box.watch[0].ref == "owner/tool", "veille : doublon (casse) ignoré")
+check(box.campaigns[0].milestones.contains { $0.title == "Bêta" }, "jalon ajouté")
+check(np?.drafts["en"] == "Hello" && np?.status == .draft && np?.channelID == box.channels.last?.id, "publication ajoutée et rattachée")
+check(np?.feedback.count == 2 && np?.total(.downloads) == 40, "retours ajoutés sans doublon")
+check(Calendar.current.component(.hour, from: np!.date) == 18, "date avec heure")
+let fp = box.campaigns[0].posts.first { $0.id == firstPost.id }!
+check(fp.notes == "saisi à la main" && fp.link == "https://example.com" && fp.drafts["it"] == "Ciao", "champs vides complétés, saisie conservée")
+check(r1.added == 4 && r1.updated == 2, "compte des ajouts (\(r1.added)) et mises à jour (\(r1.updated))")
+let again = try! Inbox.merge(Data(changes.utf8), into: &box)
+check(again.added == 0 && again.updated == 0, "refaire le même fichier ne change rien")
+let forced = try! Inbox.merge(Data(#"{"overwrite": true, "posts": [{"id": "\#(firstPost.id.uuidString)", "notes": "remplacé"}]}"#.utf8), into: &box)
+check(forced.updated == 1 && box.campaigns[0].posts.first { $0.id == firstPost.id }!.notes == "remplacé", "écrasement demandé")
+let before = box.campaigns[0].posts.count
+let bad = #"{"posts": [{"title": "A", "date": "2030-01-01"}, {"title": "B", "date": "2030-01-01", "channel": "inconnu"}]}"#
+check((try? Inbox.merge(Data(bad.utf8), into: &box)) == nil && box.campaigns[0].posts.count == before, "tout ou rien sur erreur")
+check((try? Inbox.merge(Data("pas du json".utf8), into: &box)) == nil, "JSON illisible refusé")
+
+// Plan complet : fusion dans un autre plan sans doublon
+var other = AppData(channels: Sample.channels())
+let planJSON = try! Storage.encode(box)
+let rp = try! Inbox.merge(planJSON, into: &other)
+check(other.campaigns.count == 1 && other.campaigns[0].posts.count == box.campaigns[0].posts.count, "plan complet fusionné (\(rp.added) ajouts)")
+check(other.campaigns[0].posts.allSatisfy { p in p.channelID == nil || other.channels.contains { $0.id == p.channelID } }, "canaux rattachés aux canaux locaux")
+check(other.channels.count == box.channels.count && other.watch.count == 1, "canaux et veille sans doublon")
+let rp2 = try! Inbox.merge(planJSON, into: &other)
+check(rp2.added == 0 && rp2.updated == 0, "plan refusionné : aucun changement")
+
+// Dossier : rangement dans processed/errors et journal
+let tmp = FileManager.default.temporaryDirectory.appendingPathComponent("herald-inbox-\(UUID().uuidString)")
+Inbox.prepare(tmp)
+try! Data(#"{"watch": [{"url": "skyrim/42", "name": "Mod"}]}"#.utf8).write(to: tmp.appendingPathComponent("a.json"))
+try! Data("{".utf8).write(to: tmp.appendingPathComponent("b.json"))
+try! Data("ignoré".utf8).write(to: tmp.appendingPathComponent("note.txt"))
+var dd = AppData()
+let lines = Inbox.process(tmp, into: &dd)
+let fm = FileManager.default
+check(dd.watch.count == 1 && dd.watch[0].kind == .nexus, "fichier du dossier fusionné")
+check(fm.fileExists(atPath: tmp.appendingPathComponent("processed/a.json").path)
+      && fm.fileExists(atPath: tmp.appendingPathComponent("errors/b.json").path)
+      && fm.fileExists(atPath: tmp.appendingPathComponent("note.txt").path), "fichiers rangés, autres ignorés")
+check(lines.count == 3 && Inbox.readLog(tmp).count == 3, "journal écrit")
+try? fm.removeItem(at: tmp)
+
 print(failures == 0 ? "OK : tous les tests passent" : "\(failures) échec(s)")
 exit(failures == 0 ? 0 : 1)

@@ -1,0 +1,264 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "hERALD — fichier de changements (boîte de dépôt)",
+  "description": "Fusion prudente : un élément existant (même id, sinon même titre et même jour, ou même nom) n'a que ses champs vides complétés, sauf overwrite: true. Tout ou rien : une erreur et rien n'est appliqué.",
+  "type": "object",
+  "properties": {
+    "format": {
+      "const": "herald-changes"
+    },
+    "overwrite": {
+      "type": "boolean",
+      "description": "remplacer aussi les champs déjà remplis (tout le fichier)"
+    },
+    "campaign": {
+      "description": "campagne visée (créée si absente) ; par défaut la campagne affichée",
+      "oneOf": [
+        {
+          "type": "string",
+          "description": "id (UUID) ou nom/titre exact (casse ignorée)"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "date": {
+              "type": "string",
+              "description": "AAAA-MM-JJ (midi), AAAA-MM-JJ HH:MM (heure locale) ou ISO 8601"
+            },
+            "notes": {
+              "type": "string"
+            }
+          }
+        }
+      ]
+    },
+    "channels": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "nexus",
+              "reddit",
+              "discord",
+              "youtube",
+              "github",
+              "x",
+              "bluesky",
+              "instagram",
+              "forum",
+              "other"
+            ]
+          },
+          "url": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "overwrite": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "watch": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "URL GitHub ou Nexus, ou « propriétaire/dépôt », « jeu/identifiant »"
+          },
+          "kind": {
+            "enum": [
+              "github",
+              "nexus"
+            ]
+          },
+          "ref": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "overwrite": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "milestones": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "title",
+          "date"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string",
+            "description": "AAAA-MM-JJ (midi), AAAA-MM-JJ HH:MM (heure locale) ou ISO 8601"
+          },
+          "kind": {
+            "enum": [
+              "teaser",
+              "announce",
+              "followup",
+              "other"
+            ]
+          },
+          "overwrite": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "posts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string",
+            "description": "AAAA-MM-JJ (midi), AAAA-MM-JJ HH:MM (heure locale) ou ISO 8601"
+          },
+          "channel": {
+            "type": "string",
+            "description": "canal : id, nom ou type (reddit, nexus…)"
+          },
+          "milestone": {
+            "type": "string",
+            "description": "id (UUID) ou nom/titre exact (casse ignorée)"
+          },
+          "status": {
+            "enum": [
+              "idea",
+              "draft",
+              "approved",
+              "published"
+            ]
+          },
+          "link": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "drafts": {
+            "type": "object",
+            "propertyNames": {
+              "enum": [
+                "fr",
+                "en",
+                "es",
+                "it"
+              ]
+            },
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "feedback": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/feedback"
+            }
+          },
+          "overwrite": {
+            "type": "boolean"
+          }
+        },
+        "description": "nouvelle publication : title et date obligatoires"
+      }
+    },
+    "feedback": {
+      "type": "array",
+      "items": {
+        "allOf": [
+          {
+            "$ref": "#/$defs/feedback"
+          },
+          {
+            "type": "object",
+            "required": [
+              "post"
+            ],
+            "properties": {
+              "post": {
+                "type": "string",
+                "description": "id (UUID) ou nom/titre exact (casse ignorée)"
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "$defs": {
+    "feedback": {
+      "type": "object",
+      "required": [
+        "date"
+      ],
+      "properties": {
+        "date": {
+          "type": "string",
+          "description": "AAAA-MM-JJ (midi), AAAA-MM-JJ HH:MM (heure locale) ou ISO 8601"
+        },
+        "kind": {
+          "enum": [
+            "comment",
+            "downloads",
+            "endorsements",
+            "stars",
+            "views",
+            "other"
+          ]
+        },
+        "value": {
+          "type": "integer"
+        },
+        "text": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

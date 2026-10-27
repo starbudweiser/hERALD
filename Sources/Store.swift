@@ -11,8 +11,51 @@ final class Store: ObservableObject {
     /// Premier lancement : propose (sans l'imposer) la campagne d'exemple.
     @Published var welcome = !FileManager.default.fileExists(atPath: Storage.url.path)
 
+    /// Dernières lignes du journal de la boîte de dépôt, et résumé du dernier passage (effacé à la lecture).
+    @Published var inboxLog = Inbox.readLog()
+    @Published var inboxNotice: String?
+    private var inboxSource: DispatchSourceFileSystemObject?
+
     init() {
         if welcome { Storage.save(data) }
+    }
+
+    // MARK: Boîte de dépôt
+
+    /// Traite les fichiers déjà présents puis surveille le dossier Inbox tant que l'appli tourne.
+    func startInbox() {
+        guard inboxSource == nil else { return }
+        Inbox.prepare()
+        processInbox()
+        let fd = open(Inbox.dir.path, O_EVTONLY)
+        guard fd >= 0 else { return }
+        let src = DispatchSource.makeFileSystemObjectSource(fileDescriptor: fd, eventMask: .write, queue: .main)
+        src.setEventHandler { [weak self] in
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { Task { @MainActor in self?.processInbox() } }
+        }
+        src.setCancelHandler { close(fd) }
+        src.resume()
+        inboxSource = src
+    }
+
+    func processInbox() {
+        var d = data
+        let lines = Inbox.process(into: &d, minAge: 1)
+        if !lines.isEmpty {
+            data = d
+            inboxLog = Inbox.readLog()
+            let files = lines.filter { !$0.contains("   ") }.count
+            inboxNotice = L.t("inbox.notice", files)
+        }
+        // Fichiers encore en cours d'écriture : nouvel essai un peu plus tard.
+        if !Inbox.pending().isEmpty {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { Task { @MainActor in self.processInbox() } }
+        }
+    }
+
+    func revealInbox() {
+        Inbox.prepare()
+        NSWorkspace.shared.open(Inbox.dir)
     }
 
     // MARK: Campagne affichée

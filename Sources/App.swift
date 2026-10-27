@@ -11,7 +11,7 @@ struct HeraldApp: App {
         Window("hERALD", id: "main") {
             ZoomedRoot(zoom: zoom)
                 .environmentObject(store)
-                .task { await store.checkIfStale() }
+                .task { store.startInbox(); await store.checkIfStale() }
         }
         .defaultSize(width: 1320, height: 820)
         .commands {
@@ -28,6 +28,7 @@ struct HeraldApp: App {
             CommandGroup(replacing: .importExport) {
                 Button(L.t("menu.export")) { store.exportPlan() }.keyboardShortcut("e")
                 Button(L.t("menu.import")) { _ = store.importPlan() }
+                Button(L.t("menu.inbox")) { store.revealInbox() }
             }
         }
     }
@@ -144,7 +145,7 @@ struct WelcomeView: View {
             }
         }
         .padding(Socle.M.space6)
-        .frame(width: 560)
+        .frame(width: 640)
         .background(Socle.C.surface)
     }
 }
@@ -248,9 +249,14 @@ struct HeaderBar: View {
             }
             Spacer(minLength: Socle.M.space4)
             if let problem { Text(branded: problem).socle(Socle.T.meta).foregroundStyle(Socle.C.danger) }
+            if let notice = store.inboxNotice {
+                Button { store.inboxNotice = nil; settings = true } label: { Badge(text: notice, kind: .accent) }
+                    .buttonStyle(.plain).help(L.t("inbox.title"))
+            }
             Menu {
                 Button(L.t("menu.export")) { store.exportPlan() }
                 Button(L.t("menu.import")) { problem = store.importPlan() }
+                Button(L.t("menu.inbox")) { store.revealInbox() }
                 Divider()
                 Button(L.t("menu.sample")) { store.addSample() }
             } label: { Text(L.t("menu.plan")) }
@@ -351,6 +357,7 @@ struct CampaignSheet: View {
 // MARK: Réglages
 
 struct SettingsView: View {
+    @EnvironmentObject var store: Store
     @Environment(\.dismiss) private var dismiss
     @State private var key = Keychain.get("nexus")
 
@@ -370,6 +377,24 @@ struct SettingsView: View {
                         .buttonStyle(SocleButtonStyle(.tertiary, height: Socle.M.sizeControl)).fixedSize()
                 }
             }
+            Field(label: L.t("inbox.title")) {
+                HStack {
+                    Text(Inbox.dir.path).socle(Socle.T.monoSm).foregroundStyle(Socle.C.textMuted).lineLimit(1).truncationMode(.middle)
+                    Spacer()
+                    Button(L.t("settings.reveal")) { store.revealInbox() }
+                        .buttonStyle(SocleButtonStyle(.tertiary, height: Socle.M.sizeControl)).fixedSize()
+                }
+                Text(L.t("inbox.note")).socle(Socle.T.meta).foregroundStyle(Socle.C.textSubtle)
+                    .fixedSize(horizontal: false, vertical: true)
+                ScrollView {
+                    Text(store.inboxLog.isEmpty ? L.t("inbox.log.empty") : store.inboxLog.reversed().joined(separator: "\n"))
+                        .socle(Socle.T.monoSm).foregroundStyle(Socle.C.textMuted)
+                        .frame(maxWidth: .infinity, alignment: .leading).textSelection(.enabled)
+                }
+                .frame(height: 120)
+                .padding(Socle.M.space2)
+                .background(Socle.C.control, in: RoundedRectangle(cornerRadius: Socle.M.radius))
+            }
             Callout(kind: .info, text: L.t("rule.long"))
             HStack(spacing: Socle.M.space2) {
                 Spacer()
@@ -380,7 +405,7 @@ struct SettingsView: View {
             }
         }
         .padding(Socle.M.space6)
-        .frame(width: 560)
+        .frame(width: 640)
         .background(Socle.C.surface)
     }
 }

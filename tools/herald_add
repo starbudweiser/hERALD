@@ -1,0 +1,222 @@
+#!/usr/bin/env python3
+"""herald_add — dépose des changements dans la boîte de dépôt de hERALD (sans dépendance).
+
+hERALD surveille ~/Library/Application Support/hERALD/Inbox et fusionne chaque fichier JSON déposé
+dans le plan (ajoute ce qui manque, complète les champs vides, n'écrase rien sans --overwrite).
+hERALD ne publie jamais rien : ce script ne fait qu'écrire un fichier local.
+
+Exemples :
+  herald_add post --title "Annonce" --date 2026-11-11 --channel Reddit --status draft \\
+             --draft fr="Bonjour…" --draft-file en=annonce_en.md
+  herald_add milestone --title "Jour J" --date 2026-11-11 --kind announce
+  herald_add channel --name "r/macgaming" --kind reddit --url https://www.reddit.com/r/macgaming
+  herald_add watch https://github.com/owner/repo --name "Mon outil"
+  herald_add feedback --post "Annonce" --date 2026-11-12 --kind downloads --value 120
+  herald_add campaign --name "Version 2" --date 2027-01-15
+  herald_add json changements.json        (ou « - » pour lire l'entrée standard ; accepte aussi un plan .herald)
+  herald_add schema                       (affiche le schéma JSON du format)
+"""
+import argparse, json, os, re, sys, tempfile, time, uuid
+
+INBOX = os.path.expanduser("~/Library/Application Support/hERALD/Inbox")
+STATUSES = ["idea", "draft", "approved", "published"]
+LANGS = ["fr", "en", "es", "it"]
+CHANNEL_KINDS = ["nexus", "reddit", "discord", "youtube", "github", "x", "bluesky", "instagram", "forum", "other"]
+MILESTONE_KINDS = ["teaser", "announce", "followup", "other"]
+FEEDBACK_KINDS = ["comment", "downloads", "endorsements", "stars", "views", "other"]
+DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}([ T]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?)?$")
+
+DATE = {"type": "string", "description": "AAAA-MM-JJ (midi), AAAA-MM-JJ HH:MM (heure locale) ou ISO 8601"}
+REF = {"type": "string", "description": "id (UUID) ou nom/titre exact (casse ignorée)"}
+SCHEMA = {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "hERALD — fichier de changements (boîte de dépôt)",
+    "description": "Fusion prudente : un élément existant (même id, sinon même titre et même jour, ou même nom) "
+                   "n'a que ses champs vides complétés, sauf overwrite: true. Tout ou rien : une erreur et rien n'est appliqué.",
+    "type": "object",
+    "properties": {
+        "format": {"const": "herald-changes"},
+        "overwrite": {"type": "boolean", "description": "remplacer aussi les champs déjà remplis (tout le fichier)"},
+        "campaign": {"description": "campagne visée (créée si absente) ; par défaut la campagne affichée",
+                     "oneOf": [REF, {"type": "object", "properties": {"id": {"type": "string"}, "name": {"type": "string"},
+                                                                       "date": DATE, "notes": {"type": "string"}}}]},
+        "channels": {"type": "array", "items": {"type": "object", "required": ["name"], "properties": {
+            "id": {"type": "string"}, "name": {"type": "string"}, "kind": {"enum": CHANNEL_KINDS},
+            "url": {"type": "string"}, "notes": {"type": "string"}, "overwrite": {"type": "boolean"}}}},
+        "watch": {"type": "array", "items": {"type": "object", "properties": {
+            "url": {"type": "string", "description": "URL GitHub ou Nexus, ou « propriétaire/dépôt », « jeu/identifiant »"},
+            "kind": {"enum": ["github", "nexus"]}, "ref": {"type": "string"}, "name": {"type": "string"},
+            "notes": {"type": "string"}, "id": {"type": "string"}, "overwrite": {"type": "boolean"}}}},
+        "milestones": {"type": "array", "items": {"type": "object", "required": ["title", "date"], "properties": {
+            "id": {"type": "string"}, "title": {"type": "string"}, "date": DATE, "kind": {"enum": MILESTONE_KINDS},
+            "overwrite": {"type": "boolean"}}}},
+        "posts": {"type": "array", "items": {"type": "object", "properties": {
+            "id": {"type": "string"}, "title": {"type": "string"}, "date": DATE,
+            "channel": dict(REF, description="canal : id, nom ou type (reddit, nexus…)"), "milestone": REF,
+            "status": {"enum": STATUSES}, "link": {"type": "string"}, "notes": {"type": "string"},
+            "drafts": {"type": "object", "propertyNames": {"enum": LANGS}, "additionalProperties": {"type": "string"}},
+            "feedback": {"type": "array", "items": {"$ref": "#/$defs/feedback"}}, "overwrite": {"type": "boolean"}},
+            "description": "nouvelle publication : title et date obligatoires"}},
+        "feedback": {"type": "array", "items": {"allOf": [{"$ref": "#/$defs/feedback"},
+                     {"type": "object", "required": ["post"], "properties": {"post": REF}}]}},
+    },
+    "$defs": {"feedback": {"type": "object", "required": ["date"], "properties": {
+        "date": DATE, "kind": {"enum": FEEDBACK_KINDS}, "value": {"type": "integer"}, "text": {"type": "string"}}}},
+}
+
+
+def fail(msg):
+    sys.exit(f"herald_add : {msg}")
+
+
+def check_date(s, what):
+    if s is not None and not DATE_RE.match(s):
+        fail(f"{what} : date invalide « {s} » (attendu AAAA-MM-JJ ou AAAA-MM-JJ HH:MM)")
+    return s
+
+
+def pairs(items, flag, read_file=False):
+    out = {}
+    for it in items or []:
+        lang, sep, val = it.partition("=")
+        lang = lang.strip().lower()
+        if not sep or lang not in LANGS:
+            fail(f"{flag} attend langue=texte avec une langue parmi {', '.join(LANGS)}")
+        if read_file:
+            with open(os.path.expanduser(val), encoding="utf-8") as f:
+                val = f.read().strip()
+        out[lang] = val
+    return out
+
+
+def clean(d):
+    return {k: v for k, v in d.items() if v not in (None, "", {}, [])}
+
+
+def validate(doc):
+    """Contrôles légers avant dépôt (hERALD revérifie tout et range les fichiers refusés dans errors/)."""
+    if not isinstance(doc, dict):
+        fail("le JSON doit être un objet")
+    if "campaigns" in doc:
+        return  # plan .herald complet
+    if doc.get("format", "herald-changes") != "herald-changes":
+        fail("format inconnu (attendu « herald-changes » ou un plan .herald)")
+    for p in doc.get("posts", []):
+        check_date(p.get("date"), "post")
+        if p.get("status") and p["status"] not in STATUSES:
+            fail(f"statut inconnu « {p['status']} » ({', '.join(STATUSES)})")
+        for lang in p.get("drafts", {}):
+            if lang not in LANGS:
+                fail(f"langue de brouillon inconnue « {lang} »")
+    for m in doc.get("milestones", []):
+        if not m.get("title") or not m.get("date"):
+            fail("un jalon demande title et date")
+        check_date(m["date"], "jalon")
+    for f in doc.get("feedback", []):
+        if not f.get("post") or not f.get("date"):
+            fail("un retour demande post et date")
+        check_date(f["date"], "retour")
+
+
+def drop(doc, inbox, label, dry):
+    validate(doc)
+    text = json.dumps(doc, ensure_ascii=False, indent=2)
+    if dry:
+        print(text)
+        return
+    os.makedirs(inbox, exist_ok=True)
+    name = f"{time.strftime('%Y%m%d-%H%M%S')}-{label}-{uuid.uuid4().hex[:6]}.json"
+    # Écriture dans un fichier caché puis renommage : hERALD ne voit jamais un fichier à moitié écrit.
+    fd, tmp = tempfile.mkstemp(prefix=".", suffix=".tmp", dir=inbox)
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
+        f.write(text + "\n")
+    os.replace(tmp, os.path.join(inbox, name))
+    print(os.path.join(inbox, name))
+
+
+def main():
+    ap = argparse.ArgumentParser(prog="herald_add", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--inbox", default=INBOX, help="dossier de dépôt (par défaut : %(default)s)")
+    ap.add_argument("--dry-run", action="store_true", help="affiche le JSON sans le déposer")
+    sub = ap.add_subparsers(dest="cmd", required=True)
+
+    def common(p, campaign=True):
+        if campaign:
+            p.add_argument("--campaign", help="campagne visée (id ou nom ; créée si absente)")
+        p.add_argument("--id", help="identifiant (UUID) de l'élément à mettre à jour")
+        p.add_argument("--overwrite", action="store_true", help="remplacer aussi les champs déjà remplis")
+        return p
+
+    p = common(sub.add_parser("post", help="ajouter ou compléter une publication"))
+    p.add_argument("--title"); p.add_argument("--date"); p.add_argument("--channel"); p.add_argument("--milestone")
+    p.add_argument("--status", choices=STATUSES); p.add_argument("--link"); p.add_argument("--notes")
+    p.add_argument("--draft", action="append", metavar="LANG=TEXTE", help="brouillon (répétable)")
+    p.add_argument("--draft-file", action="append", metavar="LANG=FICHIER", help="brouillon lu dans un fichier (répétable)")
+
+    p = common(sub.add_parser("milestone", help="ajouter ou compléter un jalon"))
+    p.add_argument("--title", required=True); p.add_argument("--date", required=True)
+    p.add_argument("--kind", choices=MILESTONE_KINDS)
+
+    p = common(sub.add_parser("channel", help="ajouter ou compléter un canal"), campaign=False)
+    p.add_argument("--name", required=True); p.add_argument("--kind", choices=CHANNEL_KINDS)
+    p.add_argument("--url"); p.add_argument("--notes")
+
+    p = common(sub.add_parser("watch", help="surveiller un produit (GitHub ou Nexus)"), campaign=False)
+    p.add_argument("url", help="URL GitHub/Nexus, « propriétaire/dépôt » ou « jeu/identifiant »")
+    p.add_argument("--name"); p.add_argument("--notes")
+
+    p = common(sub.add_parser("feedback", help="ajouter un retour à une publication"))
+    p.add_argument("--post", required=True, help="publication : id ou titre exact")
+    p.add_argument("--date", required=True); p.add_argument("--kind", choices=FEEDBACK_KINDS, default="comment")
+    p.add_argument("--value", type=int, default=1); p.add_argument("--text")
+
+    p = sub.add_parser("campaign", help="créer ou compléter une campagne")
+    p.add_argument("--name", required=True); p.add_argument("--date"); p.add_argument("--notes")
+    p.add_argument("--overwrite", action="store_true")
+
+    p = sub.add_parser("json", help="déposer un fichier JSON de changements ou un plan .herald")
+    p.add_argument("file", help="chemin du fichier, ou « - » pour l'entrée standard")
+
+    sub.add_parser("schema", help="afficher le schéma JSON du format")
+
+    a = ap.parse_args()
+    if a.cmd == "schema":
+        print(json.dumps(SCHEMA, ensure_ascii=False, indent=2)); return
+    if a.cmd == "json":
+        try:
+            doc = json.load(sys.stdin if a.file == "-" else open(os.path.expanduser(a.file), encoding="utf-8"))
+        except (OSError, ValueError) as e:
+            fail(f"lecture impossible : {e}")
+        drop(doc, a.inbox, "json", a.dry_run); return
+
+    doc = {"format": "herald-changes"}
+    if getattr(a, "campaign", None):
+        doc["campaign"] = a.campaign
+    item = {"id": getattr(a, "id", None), "overwrite": a.overwrite or None}
+    if a.cmd == "post":
+        if not a.id and not a.title:
+            fail("post demande --title (ou --id pour compléter une publication existante)")
+        drafts = {**pairs(a.draft, "--draft"), **pairs(a.draft_file, "--draft-file", read_file=True)}
+        item.update(title=a.title, date=check_date(a.date, "post"), channel=a.channel, milestone=a.milestone,
+                    status=a.status, link=a.link, notes=a.notes, drafts=drafts)
+        doc["posts"] = [clean(item)]
+    elif a.cmd == "milestone":
+        item.update(title=a.title, date=check_date(a.date, "jalon"), kind=a.kind)
+        doc["milestones"] = [clean(item)]
+    elif a.cmd == "channel":
+        item.update(name=a.name, kind=a.kind, url=a.url, notes=a.notes)
+        doc["channels"] = [clean(item)]
+    elif a.cmd == "watch":
+        item.update(url=a.url, name=a.name, notes=a.notes)
+        doc["watch"] = [clean(item)]
+    elif a.cmd == "feedback":
+        item.update(post=a.post, date=check_date(a.date, "retour"), kind=a.kind, value=a.value, text=a.text)
+        doc["feedback"] = [clean(item)]
+    elif a.cmd == "campaign":
+        doc["campaign"] = clean({"name": a.name, "date": check_date(a.date, "campagne"), "notes": a.notes,
+                                 "overwrite": a.overwrite or None})
+    drop(doc, a.inbox, a.cmd, a.dry_run)
+
+
+if __name__ == "__main__":
+    main()
