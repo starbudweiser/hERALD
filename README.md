@@ -1,7 +1,7 @@
 # hERALD
 
-**For modders: plan, prepare and track your communication — hERALD never publishes anything itself.**  
-*Pour les moddeurs : planifier, préparer et suivre votre communication — hERALD ne publie jamais rien lui-même.*
+**Communication campaign management for modders — hERALD never publishes anything itself.**  
+*Gestion de campagne de communication pour moddeurs — hERALD ne publie jamais rien lui-même.*
 
 🇬🇧 [English](#-english) · 🇫🇷 [Français](#-français)
 

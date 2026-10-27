@@ -172,9 +172,11 @@ struct HeaderBar: View {
     var body: some View {
         HStack(spacing: Socle.M.space2) {
             Text("hERALD").socle(Socle.T.title).foregroundStyle(Socle.C.textStrong)
-            Text(store.hasCampaign ? store.campaign.name : L.t("app.subtitle"))
-                .socle(Socle.T.body).foregroundStyle(Socle.C.textMuted).lineLimit(1)
-            if store.hasCampaign { Countdown(days: store.daysLeft(store.campaign)) }
+            Text(L.t("app.subtitle")).socle(Socle.T.body).foregroundStyle(Socle.C.textMuted).lineLimit(1)
+            if store.hasCampaign {
+                Text("·  \(store.campaign.name)").socle(Socle.T.body).foregroundStyle(Socle.C.textStrong).lineLimit(1)
+                Countdown(days: store.daysLeft(store.campaign))
+            }
             Spacer(minLength: Socle.M.space4)
             if let problem { Text(problem).socle(Socle.T.meta).foregroundStyle(Socle.C.danger) }
             Menu {

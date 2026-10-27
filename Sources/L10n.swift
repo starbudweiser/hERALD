@@ -21,7 +21,7 @@ enum L {
     static let tables: [String: [String: String]] = ["fr": fr, "en": en, "es": es, "it": it]
 
     private static let fr: [String: String] = [
-        "app.subtitle": "Plan de communication pour moddeurs",
+        "app.subtitle": "Gestion de campagne de communication",
         "rule.banner": "Règle d'or : hERALD ne publie jamais. Il prépare et suit ; chaque envoi reste manuel, avec votre accord.",
         "rule.long": "hERALD ne publie rien et n'envoie aucun message : il prépare vos textes, les copie dans le presse-papiers et suit vos publications. La veille ne fait que lire des pages publiques (GitHub, Nexus).",
         "action.add": "Ajouter", "action.cancel": "ANNULER", "action.copied": "Copié ✓", "action.copy": "COPIER",
@@ -102,7 +102,7 @@ enum L {
     ]
 
     private static let en: [String: String] = [
-        "app.subtitle": "Communication plan for modders",
+        "app.subtitle": "Communication campaign management",
         "rule.banner": "Golden rule: hERALD never publishes. It prepares and tracks; every post stays manual, with your approval.",
         "rule.long": "hERALD publishes nothing and sends no message: it prepares your texts, copies them to the clipboard and tracks your posts. Monitoring only reads public pages (GitHub, Nexus).",
         "action.add": "Add", "action.cancel": "CANCEL", "action.copied": "Copied ✓", "action.copy": "COPY",
@@ -182,7 +182,7 @@ enum L {
     ]
 
     private static let es: [String: String] = [
-        "app.subtitle": "Plan de comunicación para modders",
+        "app.subtitle": "Gestión de campañas de comunicación",
         "rule.banner": "Regla de oro: hERALD nunca publica. Prepara y hace seguimiento; cada envío sigue siendo manual, con tu aprobación.",
         "rule.long": "hERALD no publica nada ni envía ningún mensaje: prepara tus textos, los copia al portapapeles y sigue tus publicaciones. La vigilancia solo lee páginas públicas (GitHub, Nexus).",
         "action.add": "Añadir", "action.cancel": "CANCELAR", "action.copied": "Copiado ✓", "action.copy": "COPIAR",
@@ -262,7 +262,7 @@ enum L {
     ]
 
     private static let it: [String: String] = [
-        "app.subtitle": "Piano di comunicazione per modder",
+        "app.subtitle": "Gestione di campagne di comunicazione",
         "rule.banner": "Regola d'oro: hERALD non pubblica mai. Prepara e segue; ogni invio resta manuale, con la tua approvazione.",
         "rule.long": "hERALD non pubblica nulla e non invia alcun messaggio: prepara i tuoi testi, li copia negli appunti e segue le tue pubblicazioni. Il monitoraggio legge solo pagine pubbliche (GitHub, Nexus).",
         "action.add": "Aggiungi", "action.cancel": "ANNULLA", "action.copied": "Copiato ✓", "action.copy": "COPIA",
