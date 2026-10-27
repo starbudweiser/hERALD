@@ -70,7 +70,7 @@ struct Callout: View {
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: Socle.M.space2) {
             Image(systemName: kind == .info ? "hand.raised" : "exclamationmark.triangle")
-            Text(text).socle(Socle.T.body).fixedSize(horizontal: false, vertical: true)
+            Text(branded: text).socle(Socle.T.body).fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 0)
         }
         .foregroundStyle(fg)

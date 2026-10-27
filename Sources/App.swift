@@ -57,6 +57,10 @@ struct ZoomedRoot: View {
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    func applicationWillFinishLaunching(_ notification: Notification) {
+        Socle.brand("hERALD", color: Color(red: 0xf3 / 255, green: 0x92 / 255, blue: 0))  // « h » dans l'orange du fanion du logo
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         Socle.apply()
         // ⌥+ / ⌥− / ⌥0 quelle que soit la disposition du clavier (sur AZERTY, « + » demande Maj) et au pavé numérique.
@@ -128,8 +132,8 @@ struct WelcomeView: View {
     @EnvironmentObject var store: Store
     var body: some View {
         VStack(alignment: .leading, spacing: Socle.M.space4) {
-            Text(L.t("welcome.title")).socle(Socle.T.display).foregroundStyle(Socle.C.textStrong)
-            Text(L.t("welcome.text")).socle(Socle.T.bodyLg).foregroundStyle(Socle.C.text)
+            Text(branded: L.t("welcome.title")).socle(Socle.T.display).foregroundStyle(Socle.C.textStrong)
+            Text(branded: L.t("welcome.text")).socle(Socle.T.bodyLg).foregroundStyle(Socle.C.text)
                 .fixedSize(horizontal: false, vertical: true)
             HStack(spacing: Socle.M.space2) {
                 Spacer()
@@ -236,14 +240,14 @@ struct HeaderBar: View {
 
     var body: some View {
         HStack(spacing: Socle.M.space2) {
-            Text("hERALD").socle(Socle.T.title).foregroundStyle(Socle.C.textStrong)
+            Text(branded: "hERALD").socle(Socle.T.title).foregroundStyle(Socle.C.textStrong)
             Text(L.t("app.subtitle")).socle(Socle.T.body).foregroundStyle(Socle.C.textMuted).lineLimit(1)
             if store.hasCampaign {
                 Text("·  \(store.campaign.name)").socle(Socle.T.body).foregroundStyle(Socle.C.textStrong).lineLimit(1)
                 Countdown(days: store.daysLeft(store.campaign))
             }
             Spacer(minLength: Socle.M.space4)
-            if let problem { Text(problem).socle(Socle.T.meta).foregroundStyle(Socle.C.danger) }
+            if let problem { Text(branded: problem).socle(Socle.T.meta).foregroundStyle(Socle.C.danger) }
             Menu {
                 Button(L.t("menu.export")) { store.exportPlan() }
                 Button(L.t("menu.import")) { problem = store.importPlan() }
