@@ -1,5 +1,6 @@
 #!/bin/zsh
-# Construit « hERALD.app » (dossier du projet), signé avec le certificat stable (_tools/sign_app.sh).
+# Construit « hERALD.app » dans le dossier du projet. Si un script de signature ../_tools/sign_app.sh existe
+# (certificat local stable), il signe l'appli ; sinon signature ad hoc.
 set -euo pipefail
 cd "$(dirname "$0")"
 APP="hERALD.app"
@@ -19,6 +20,7 @@ done
 iconutil -c icns build/icon.iconset -o "$APP/Contents/Resources/AppIcon.icns"
 cp Resources/Info.plist "$APP/Contents/Info.plist"
 rm -rf build
-"$(cd .. && pwd)/_tools/sign_app.sh" "$APP"
+SIGN="$(cd .. && pwd)/_tools/sign_app.sh"
+if [ -x "$SIGN" ]; then "$SIGN" "$APP"; else codesign --force --deep -s - "$APP"; fi
 echo "OK : $APP"
 [ -n "${NO_OPEN:-}" ] || open "$APP"

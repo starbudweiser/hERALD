@@ -5,12 +5,12 @@ import SwiftUI
 struct HeraldApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var delegate
     @StateObject private var store = Store()
+    @AppStorage("zoom") private var zoom = 1.0
 
     var body: some Scene {
         Window("hERALD", id: "main") {
-            RootView()
+            ZoomedRoot(zoom: zoom)
                 .environmentObject(store)
-                .frame(minWidth: 1120, minHeight: 680)
                 .task { await store.checkIfStale() }
         }
         .defaultSize(width: 1320, height: 820)
@@ -20,6 +20,11 @@ struct HeraldApp: App {
                 Button(L.t("post.add")) { _ = store.addPost() }.keyboardShortcut("n", modifiers: [.command, .shift])
                     .disabled(!store.hasCampaign)
             }
+            CommandGroup(after: .toolbar) {
+                Button(L.t("view.zoomin")) { setZoom(zoom + 0.1) }.keyboardShortcut("+", modifiers: .option)
+                Button(L.t("view.zoomout")) { setZoom(zoom - 0.1) }.keyboardShortcut("-", modifiers: .option)
+                Button(L.t("view.zoomreset")) { setZoom(1) }.keyboardShortcut("0", modifiers: .option)
+            }
             CommandGroup(replacing: .importExport) {
                 Button(L.t("menu.export")) { store.exportPlan() }.keyboardShortcut("e")
                 Button(L.t("menu.import")) { _ = store.importPlan() }
@@ -28,8 +33,46 @@ struct HeraldApp: App {
     }
 }
 
+extension HeraldApp {
+    private func setZoom(_ z: Double) { Zoom.set(z) }
+}
+
+enum Zoom {
+    /// Zoom de l'interface entre 70 % et 200 %, par pas de 10 % (préférence « zoom », lue par @AppStorage).
+    static func set(_ z: Double) { UserDefaults.standard.set(min(2, max(0.7, (z * 10).rounded() / 10)), forKey: "zoom") }
+}
+
+/// Toute l'interface mise à l'échelle : la mise en page se fait à la taille divisée par le zoom, puis s'agrandit.
+struct ZoomedRoot: View {
+    let zoom: Double
+    var body: some View {
+        GeometryReader { g in
+            RootView()
+                .frame(width: g.size.width / zoom, height: g.size.height / zoom)
+                .scaleEffect(zoom, anchor: .topLeading)
+        }
+        .frame(minWidth: 1120 * zoom, minHeight: 680 * zoom)
+        .background(Socle.C.bg)
+    }
+}
+
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    func applicationDidFinishLaunching(_ notification: Notification) { Socle.apply() }
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        Socle.apply()
+        // ⌥+ / ⌥− / ⌥0 quelle que soit la disposition du clavier (sur AZERTY, « + » demande Maj) et au pavé numérique.
+        NSEvent.addLocalMonitorForEvents(matching: .keyDown) { e in
+            let mods = e.modifierFlags.intersection([.command, .option, .control])
+            guard mods == .option, let c = e.charactersIgnoringModifiers else { return e }
+            let z = UserDefaults.standard.object(forKey: "zoom") as? Double ?? 1
+            switch c {
+            case "+", "=": Zoom.set(z + 0.1)
+            case "-", "_": Zoom.set(z - 0.1)
+            case "0", "à": Zoom.set(1)
+            default: return e
+            }
+            return nil
+        }
+    }
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
 }
 
@@ -76,6 +119,29 @@ struct RootView: View {
         .background(Socle.C.bg)
         .sheet(isPresented: $editingCampaign) { CampaignSheet().environmentObject(store) }
         .sheet(isPresented: $settings) { SettingsView().environmentObject(store) }
+        .sheet(isPresented: $store.welcome) { WelcomeView().environmentObject(store) }
+    }
+}
+
+/// Premier lancement : exemple facultatif.
+struct WelcomeView: View {
+    @EnvironmentObject var store: Store
+    var body: some View {
+        VStack(alignment: .leading, spacing: Socle.M.space4) {
+            Text(L.t("welcome.title")).socle(Socle.T.display).foregroundStyle(Socle.C.textStrong)
+            Text(L.t("welcome.text")).socle(Socle.T.bodyLg).foregroundStyle(Socle.C.text)
+                .fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: Socle.M.space2) {
+                Spacer()
+                Button(L.t("welcome.empty")) { store.welcome = false }
+                    .buttonStyle(SocleButtonStyle(.secondary)).fixedSize()
+                Button(L.t("welcome.sample")) { store.addSample(); store.welcome = false }
+                    .buttonStyle(SocleButtonStyle(.primary)).fixedSize().keyboardShortcut(.defaultAction)
+            }
+        }
+        .padding(Socle.M.space6)
+        .frame(width: 560)
+        .background(Socle.C.surface)
     }
 }
 
@@ -167,7 +233,6 @@ struct HeaderBar: View {
     @Binding var editing: Bool
     @Binding var settings: Bool
     @State private var problem: String?
-    @State private var resetting = false
 
     var body: some View {
         HStack(spacing: Socle.M.space2) {
@@ -183,7 +248,7 @@ struct HeaderBar: View {
                 Button(L.t("menu.export")) { store.exportPlan() }
                 Button(L.t("menu.import")) { problem = store.importPlan() }
                 Divider()
-                Button(L.t("menu.sample")) { resetting = true }
+                Button(L.t("menu.sample")) { store.addSample() }
             } label: { Text(L.t("menu.plan")) }
                 .menuStyle(.borderlessButton).fixedSize()
             Button(L.t("campaign.edit")) { editing = true }
@@ -196,9 +261,6 @@ struct HeaderBar: View {
         .padding(.horizontal, Socle.M.space3)
         .frame(minHeight: Socle.M.sizeBar + 8)
         .background(Socle.C.surfaceRaised)
-        .confirmationDialog(L.t("menu.sample.confirm"), isPresented: $resetting) {
-            Button(L.t("menu.sample"), role: .destructive) { store.resetToSample() }
-        }
     }
 }
 

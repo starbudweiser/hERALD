@@ -15,7 +15,9 @@
 - **Monitoring**: watch GitHub releases and Nexus mod pages (read only, public APIs; the optional Nexus API key stays in the macOS keychain). Checked automatically once a week at launch; weekly report readable in the app and copyable as Markdown.
 - **Feedback**: record comments, downloads, endorsements, stars or views per post, or import a CSV `date;type;value;text` (`2026-11-11;comment;3;Nice`).
 - Local data in `~/Library/Application Support/hERALD/plan.json`; export/import of the whole plan (keys never included).
-- Ships with a sample plan (Skyrim's 15th anniversary, November 11, 2026); *Plan → Reload the sample plan* restores it.
+- Optional example campaign (a fictional mod launch with milestones, channels and placeholder drafts), offered at first launch and deletable; *Plan → Add the example campaign* brings it back.
+- Plans are saved and shared as `.herald` files (JSON).
+- Zoom the whole interface with ⌥+ / ⌥− (⌥0 for actual size), from 70 % to 200 %.
 - Interface in English, French, Spanish and Italian (follows your Mac's language, English otherwise). macOS 14+.
 
 Build: `./build_app.sh` · tests: `tests/run_tests.sh`
@@ -30,7 +32,10 @@ Build: `./build_app.sh` · tests: `tests/run_tests.sh`
 - **Veille** : versions GitHub et pages de mods Nexus (lecture seule, API publiques ; la clé API Nexus facultative reste dans le trousseau macOS). Vérification automatique une fois par semaine au lancement ; rapport hebdomadaire lisible dans l'appli et copiable en Markdown.
 - **Retours** : commentaires, téléchargements, endorsements, étoiles ou vues par publication, saisis à la main ou importés d'un CSV `date;type;valeur;texte`.
 - Données locales dans `~/Library/Application Support/hERALD/plan.json` ; export/import du plan complet (sans aucune clé).
-- Plan d'exemple fourni (15 ans de Skyrim, 11 novembre 2026) ; *Plan → Recharger le plan d'exemple* le rétablit.
+- Campagne d'exemple facultative (lancement fictif d'un mod : jalons, canaux, brouillons à compléter), proposée au premier lancement et supprimable ; *Plan → Ajouter la campagne d'exemple* la recrée.
+- Les plans s'enregistrent et s'échangent en fichiers `.herald` (JSON).
+- Zoom de toute l'interface avec ⌥+ / ⌥− (⌥0 pour la taille normale), de 70 % à 200 %.
+- Interface en français, anglais, espagnol et italien (langue du Mac, anglais sinon). macOS 14+.
 
 Compilation : `./build_app.sh` · tests : `tests/run_tests.sh`
 

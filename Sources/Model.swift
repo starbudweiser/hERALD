@@ -183,9 +183,9 @@ enum Storage {
         return try e.encode(p)
     }
 
-    /// Premier lancement : le plan d'exemple.
+    /// Premier lancement : aucun plan, seulement les canaux par défaut (l'exemple est proposé à part).
     static func load() -> AppData {
-        guard let data = try? Data(contentsOf: url), let p = try? decode(data) else { return Sample.make() }
+        guard let data = try? Data(contentsOf: url), let p = try? decode(data) else { return AppData(channels: Sample.channels()) }
         return p
     }
 

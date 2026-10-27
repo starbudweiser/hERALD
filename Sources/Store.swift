@@ -8,9 +8,11 @@ import UniformTypeIdentifiers
 final class Store: ObservableObject {
     @Published var data = Storage.load() { didSet { Storage.save(data) } }
     @Published var checking = false
+    /// Premier lancement : propose (sans l'imposer) la campagne d'exemple.
+    @Published var welcome = !FileManager.default.fileExists(atPath: Storage.url.path)
 
     init() {
-        if !FileManager.default.fileExists(atPath: Storage.url.path) { Storage.save(data) }
+        if welcome { Storage.save(data) }
     }
 
     // MARK: Campagne affichée
@@ -73,10 +75,13 @@ final class Store: ObservableObject {
 
     // MARK: Export / import (fichier JSON du plan complet, sans aucune clé)
 
+    /// Fichier « .herald » : le plan en JSON.
+    static let planType = UTType(filenameExtension: "herald", conformingTo: .json) ?? .json
+
     func exportPlan() {
         let panel = NSSavePanel()
-        panel.allowedContentTypes = [.json]
-        panel.nameFieldStringValue = "hERALD-plan.json"
+        panel.allowedContentTypes = [Self.planType]
+        panel.nameFieldStringValue = "plan.herald"
         guard panel.runModal() == .OK, let url = panel.url, let d = try? Storage.encode(data) else { return }
         try? d.write(to: url, options: .atomic)
     }
@@ -84,14 +89,21 @@ final class Store: ObservableObject {
     /// Renvoie un message d'erreur si le fichier n'est pas un plan hERALD.
     func importPlan() -> String? {
         let panel = NSOpenPanel()
-        panel.allowedContentTypes = [.json]
+        panel.allowedContentTypes = [Self.planType, .json]
         guard panel.runModal() == .OK, let url = panel.url else { return nil }
         guard let d = try? Data(contentsOf: url), let p = try? Storage.decode(d) else { return L.t("import.invalid") }
         data = p
         return nil
     }
 
-    func resetToSample() { data = Sample.make() }
+    /// Ajoute la campagne d'exemple (en réutilisant les canaux existants) ; elle se supprime comme les autres.
+    func addSample() {
+        var chans = data.channels
+        let c = Sample.campaign(using: &chans)
+        data.channels = chans
+        data.campaigns.append(c)
+        data.selected = c.id
+    }
 
     // MARK: Retours
 
@@ -299,7 +311,7 @@ enum Watcher {
 
 /// Clé API Nexus rangée dans le trousseau macOS, jamais dans plan.json ni dans l'export.
 enum Keychain {
-    private static let service = "fr.stephan.herald"
+    private static let service = Bundle.main.bundleIdentifier ?? "herald"
     private static func query(_ account: String) -> [String: Any] {
         [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service, kSecAttrAccount as String: account]
     }

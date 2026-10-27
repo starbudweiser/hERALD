@@ -24,18 +24,24 @@ var p = Post(); p.feedback = fb + [Feedback(date: Date().addingTimeInterval(400 
 check(p.total(.comment) == 3, "somme des commentaires")
 check(p.total(.downloads) == 300, "dernier relevé de téléchargements")
 
-// Plan d'exemple : cohérent, 4 langues, aller-retour JSON
+// Exemple générique : cohérent, 4 langues, aucune trace personnelle, aller-retour JSON
 let sample = Sample.make()
 let c = sample.campaigns[0]
-check(c.posts.count == 16 && c.milestones.count == 6 && sample.channels.count == 8, "taille du plan d'exemple")
+check(c.posts.count == 12 && c.milestones.count == 6 && sample.channels.count == 7, "taille de l'exemple")
 check(c.posts.allSatisfy { p in sample.channels.contains { $0.id == p.channelID } && c.milestones.contains { $0.id == p.milestoneID } }, "liens canal/jalon")
 check(c.posts.filter { !$0.drafts.isEmpty }.allSatisfy { p in Lang.allCases.allSatisfy { !p.draft($0).isEmpty } }, "brouillons en 4 langues")
-check(Calendar.current.component(.day, from: c.eventDate) == 11, "Jour J le 11")
+check(sample.watch.isEmpty, "aucun produit surveillé imposé")
+let json = String(decoding: try! Storage.encode(sample), as: UTF8.self).lowercased()
+check(!["skyrim", "starbud", "stephan", "mortex"].contains { json.contains($0) }, "exemple sans donnée personnelle")
+var chans = [Channel(name: "Mon Discord", kind: .discord)]
+_ = Sample.campaign(using: &chans)
+check(chans.filter { $0.kind == .discord }.count == 1 && chans.count == 7, "l'exemple réutilise les canaux existants")
 let back = try! Storage.decode(try! Storage.encode(sample))
-check(back.campaigns[0].posts.count == 16 && back.watch.count == sample.watch.count, "aller-retour JSON")
+check(back.campaigns[0].posts.count == 12, "aller-retour JSON")
 
 // Rapport hebdomadaire
 var data = sample
+data.watch = [WatchItem(name: "Outil", kind: .github, ref: "a/b")]
 data.watch[0].history = [WatchSnapshot(date: Date().addingTimeInterval(-20 * 86400), version: "1.0"),
                          WatchSnapshot(date: Date().addingTimeInterval(-86400), version: "1.1")]
 data.campaigns[0].posts[0].status = .published
