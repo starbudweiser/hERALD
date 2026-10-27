@@ -1,0 +1,318 @@
+// hERALD — gestion d'un plan de communication pour moddeurs : prépare et suit, ne publie jamais.
+import SwiftUI
+
+@main
+struct HeraldApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) var delegate
+    @StateObject private var store = Store()
+
+    var body: some Scene {
+        Window("hERALD", id: "main") {
+            RootView()
+                .environmentObject(store)
+                .frame(minWidth: 1120, minHeight: 680)
+                .task { await store.checkIfStale() }
+        }
+        .defaultSize(width: 1320, height: 820)
+        .commands {
+            CommandGroup(replacing: .newItem) {
+                Button(L.t("campaign.add")) { store.addCampaign() }.keyboardShortcut("n")
+                Button(L.t("post.add")) { _ = store.addPost() }.keyboardShortcut("n", modifiers: [.command, .shift])
+                    .disabled(!store.hasCampaign)
+            }
+            CommandGroup(replacing: .importExport) {
+                Button(L.t("menu.export")) { store.exportPlan() }.keyboardShortcut("e")
+                Button(L.t("menu.import")) { _ = store.importPlan() }
+            }
+        }
+    }
+}
+
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    func applicationDidFinishLaunching(_ notification: Notification) { Socle.apply() }
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
+}
+
+enum Tab: String, CaseIterable { case calendar, tracking, drafts, feedback, watch, channels }
+
+struct RootView: View {
+    @EnvironmentObject var store: Store
+    @State private var tab: Tab = .calendar
+    @State private var editingCampaign = false
+    @State private var settings = false
+    @State private var selectedPost: UUID?
+
+    var body: some View {
+        HStack(spacing: 0) {
+            CampaignSidebar(editing: $editingCampaign)
+            Divider().overlay(Socle.C.border)
+            VStack(spacing: 0) {
+                HeaderBar(editing: $editingCampaign, settings: $settings)
+                Divider().overlay(Socle.C.border)
+                GoldenRule()
+                TabsBar(tab: $tab)
+                Divider().overlay(Socle.C.border)
+                Group {
+                    if !store.hasCampaign && [.calendar, .tracking, .drafts, .feedback].contains(tab) {
+                        VStack(spacing: Socle.M.space3) {
+                            EmptyState(text: L.t("campaign.empty")).frame(maxHeight: 120)
+                            Button(L.t("campaign.add")) { store.addCampaign() }
+                                .buttonStyle(SocleButtonStyle(.primary)).fixedSize()
+                        }
+                    } else {
+                        switch tab {
+                        case .calendar: CalendarView(selectedPost: $selectedPost, tab: $tab)
+                        case .tracking: TrackingView(selected: $selectedPost)
+                        case .drafts: DraftsView(selected: $selectedPost)
+                        case .feedback: FeedbackView(selected: $selectedPost)
+                        case .watch: WatchView()
+                        case .channels: ChannelsView()
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+        .background(Socle.C.bg)
+        .sheet(isPresented: $editingCampaign) { CampaignSheet().environmentObject(store) }
+        .sheet(isPresented: $settings) { SettingsView().environmentObject(store) }
+    }
+}
+
+/// Rappel permanent de la règle d'or.
+struct GoldenRule: View {
+    var body: some View {
+        Callout(kind: .info, text: L.t("rule.banner"))
+            .padding(.horizontal, Socle.M.space3).padding(.vertical, Socle.M.space2)
+    }
+}
+
+// MARK: Campagnes
+
+struct CampaignSidebar: View {
+    @EnvironmentObject var store: Store
+    @Binding var editing: Bool
+    @State private var removing: Campaign?
+
+    var body: some View {
+        VStack(spacing: 0) {
+            SectionBar(title: L.t("campaigns.title")) {
+                Button { store.addCampaign() } label: { Image(systemName: "plus") }
+                    .buttonStyle(.plain).foregroundStyle(Socle.C.textMuted).help(L.t("campaign.add"))
+            }
+            .frame(minHeight: Socle.M.sizeBar + 8)
+            Divider().overlay(Socle.C.border)
+            ScrollView {
+                LazyVStack(spacing: 0) {
+                    ForEach(store.data.campaigns) { c in
+                        let current = c.id == store.campaign.id
+                        ListRow(selected: current) { store.select(c.id) } content: {
+                            Text(c.name).socle(Socle.T.labelStrong).lineLimit(2)
+                                .foregroundStyle(current ? Socle.C.warning : Socle.C.textStrong)
+                            HStack(spacing: Socle.M.space1_5) {
+                                Text(L.day(c.eventDate)).socle(Socle.T.meta).foregroundStyle(Socle.C.textSubtle)
+                                Spacer(minLength: 0)
+                                Countdown(days: store.daysLeft(c))
+                            }
+                            ProgressBar(value: progress(c))
+                        }
+                        .contextMenu {
+                            Button(L.t("campaign.edit")) { store.select(c.id); editing = true }
+                            Button(L.t("campaign.remove")) { removing = c }
+                        }
+                    }
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .frame(width: 240)
+        .background(Socle.C.surface)
+        .confirmationDialog(L.t("campaign.remove.confirm", removing?.name ?? ""),
+                            isPresented: Binding(get: { removing != nil }, set: { if !$0 { removing = nil } })) {
+            Button(L.t("campaign.remove"), role: .destructive) { if let c = removing { store.removeCampaign(c.id) } }
+        }
+    }
+
+    private func progress(_ c: Campaign) -> Double {
+        c.posts.isEmpty ? 0 : Double(c.posts.filter { $0.status == .published }.count) / Double(c.posts.count)
+    }
+}
+
+struct Countdown: View {
+    let days: Int
+    var body: some View {
+        if days > 0 { Badge(text: L.t("countdown.left", days), kind: days <= 7 ? .warning : .accent) }
+        else if days == 0 { Badge(text: L.t("countdown.today"), kind: .success) }
+        else { Badge(text: L.t("countdown.past", -days)) }
+    }
+}
+
+struct ProgressBar: View {
+    let value: Double
+    var body: some View {
+        GeometryReader { g in
+            ZStack(alignment: .leading) {
+                Capsule().fill(Socle.C.control)
+                Capsule().fill(Socle.C.accent).frame(width: g.size.width * max(0, min(1, value)))
+            }
+        }
+        .frame(height: 4)
+    }
+}
+
+// MARK: En-tête
+
+struct HeaderBar: View {
+    @EnvironmentObject var store: Store
+    @Binding var editing: Bool
+    @Binding var settings: Bool
+    @State private var problem: String?
+    @State private var resetting = false
+
+    var body: some View {
+        HStack(spacing: Socle.M.space2) {
+            Text("hERALD").socle(Socle.T.title).foregroundStyle(Socle.C.textStrong)
+            Text(store.hasCampaign ? store.campaign.name : L.t("app.subtitle"))
+                .socle(Socle.T.body).foregroundStyle(Socle.C.textMuted).lineLimit(1)
+            if store.hasCampaign { Countdown(days: store.daysLeft(store.campaign)) }
+            Spacer(minLength: Socle.M.space4)
+            if let problem { Text(problem).socle(Socle.T.meta).foregroundStyle(Socle.C.danger) }
+            Menu {
+                Button(L.t("menu.export")) { store.exportPlan() }
+                Button(L.t("menu.import")) { problem = store.importPlan() }
+                Divider()
+                Button(L.t("menu.sample")) { resetting = true }
+            } label: { Text(L.t("menu.plan")) }
+                .menuStyle(.borderlessButton).fixedSize()
+            Button(L.t("campaign.edit")) { editing = true }
+                .buttonStyle(SocleButtonStyle(.secondary, height: Socle.M.sizeControl)).fixedSize()
+                .disabled(!store.hasCampaign)
+            Button { settings = true } label: { Image(systemName: "gearshape") }
+                .buttonStyle(SocleButtonStyle(.secondary, height: Socle.M.sizeControl)).fixedSize()
+                .help(L.t("settings.title"))
+        }
+        .padding(.horizontal, Socle.M.space3)
+        .frame(minHeight: Socle.M.sizeBar + 8)
+        .background(Socle.C.surfaceRaised)
+        .confirmationDialog(L.t("menu.sample.confirm"), isPresented: $resetting) {
+            Button(L.t("menu.sample"), role: .destructive) { store.resetToSample() }
+        }
+    }
+}
+
+struct TabsBar: View {
+    @EnvironmentObject var store: Store
+    @Binding var tab: Tab
+
+    var body: some View {
+        HStack(spacing: Socle.M.space4) {
+            ForEach(Tab.allCases, id: \.self) { t in
+                Button { tab = t } label: {
+                    Text(L.t("tab.\(t.rawValue)")).socle(Socle.T.label)
+                        .foregroundStyle(tab == t ? Socle.C.textStrong : Socle.C.textMuted)
+                        .padding(.vertical, Socle.M.space2_5)
+                        .overlay(alignment: .bottom) { Rectangle().fill(tab == t ? Socle.C.accent : .clear).frame(height: 2) }
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+            Spacer()
+        }
+        .padding(.horizontal, Socle.M.space3)
+        .background(Socle.C.bg)
+    }
+}
+
+// MARK: Campagne (nom, date, jalons)
+
+struct CampaignSheet: View {
+    @EnvironmentObject var store: Store
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Socle.M.space4) {
+            Text(L.t("campaign.edit")).socle(Socle.T.heading).foregroundStyle(Socle.C.textStrong)
+            HStack(alignment: .top, spacing: Socle.M.space4) {
+                Field(label: L.t("campaign.name")) { TextField("", text: $store.campaign.name).socleField() }
+                Field(label: L.t("campaign.date")) {
+                    DatePicker("", selection: $store.campaign.eventDate, displayedComponents: .date).labelsHidden()
+                }.fixedSize()
+            }
+            Field(label: L.t("campaign.notes")) {
+                TextEditor(text: $store.campaign.notes).socle(Socle.T.body).socleField(multiline: true).frame(height: 80)
+            }
+            HStack {
+                Text(L.t("milestones.title").uppercased()).socle(Socle.T.eyebrow).foregroundStyle(Socle.C.textSubtle)
+                Spacer()
+                Button(L.t("milestone.add")) {
+                    store.campaign.milestones.append(Milestone(title: L.t("milestone.new"), date: store.campaign.eventDate))
+                }
+                .buttonStyle(SocleButtonStyle(.secondary, height: Socle.M.sizeControl)).fixedSize()
+            }
+            ScrollView {
+                VStack(spacing: Socle.M.space2) {
+                    ForEach($store.campaign.milestones) { $m in
+                        HStack(spacing: Socle.M.space2) {
+                            DatePicker("", selection: $m.date, displayedComponents: .date).labelsHidden().fixedSize()
+                            Picker("", selection: $m.kind) {
+                                ForEach(MilestoneKind.allCases) { Text($0.label).tag($0) }
+                            }.labelsHidden().frame(width: 130)
+                            TextField("", text: $m.title).socleField()
+                            Button { store.campaign.milestones.removeAll { $0.id == m.id } } label: { Image(systemName: "trash") }
+                                .buttonStyle(.plain).foregroundStyle(Socle.C.textMuted).help(L.t("action.remove"))
+                        }
+                    }
+                }
+            }
+            .frame(minHeight: 160, maxHeight: 280)
+            HStack {
+                Spacer()
+                Button(L.t("action.done")) {
+                    store.campaign.milestones.sort { $0.date < $1.date }
+                    dismiss()
+                }
+                .buttonStyle(SocleButtonStyle(.primary)).fixedSize().keyboardShortcut(.defaultAction)
+            }
+        }
+        .padding(Socle.M.space6)
+        .frame(width: 680)
+        .background(Socle.C.surface)
+    }
+}
+
+// MARK: Réglages
+
+struct SettingsView: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var key = Keychain.get("nexus")
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Socle.M.space4) {
+            Text(L.t("settings.title")).socle(Socle.T.heading).foregroundStyle(Socle.C.textStrong)
+            Field(label: L.t("settings.nexuskey")) {
+                SecureField("", text: $key).socleField()
+                Text(L.t("settings.nexuskey.note")).socle(Socle.T.meta).foregroundStyle(Socle.C.textSubtle)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Field(label: L.t("settings.data")) {
+                HStack {
+                    Text(Storage.url.path).socle(Socle.T.monoSm).foregroundStyle(Socle.C.textMuted).lineLimit(1).truncationMode(.middle)
+                    Spacer()
+                    Button(L.t("settings.reveal")) { NSWorkspace.shared.activateFileViewerSelecting([Storage.url]) }
+                        .buttonStyle(SocleButtonStyle(.tertiary, height: Socle.M.sizeControl)).fixedSize()
+                }
+            }
+            Callout(kind: .info, text: L.t("rule.long"))
+            HStack(spacing: Socle.M.space2) {
+                Spacer()
+                Button(L.t("action.cancel")) { dismiss() }
+                    .buttonStyle(SocleButtonStyle(.secondary)).fixedSize()
+                Button(L.t("action.save")) { Keychain.set(key.trimmingCharacters(in: .whitespacesAndNewlines), "nexus"); dismiss() }
+                    .buttonStyle(SocleButtonStyle(.primary)).fixedSize().keyboardShortcut(.defaultAction)
+            }
+        }
+        .padding(Socle.M.space6)
+        .frame(width: 560)
+        .background(Socle.C.surface)
+    }
+}
