@@ -65,7 +65,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Le splash part avant que SwiftUI ouvre la fenêtre principale, pour pouvoir la retenir jusqu'à t = 2 s.
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
         Splash.shared.start(Splash.Config(title: "hERALD", subtitle: L.t("splash.subtitle"),
-                                          footer: version.isEmpty ? "" : "v" + version, accent: orange))
+                                          footer: version.isEmpty ? "" : "v" + version,
+                                          iconView: AnyView(AnimatedHeraldIcon()), accent: orange))
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
