@@ -10,6 +10,7 @@ struct HeraldApp: App {
     var body: some Scene {
         Window("hERALD", id: "main") {
             ZoomedRoot(zoom: zoom)
+                .splashGated()
                 .environmentObject(store)
                 .task { store.startInbox(); await store.checkIfStale() }
         }
@@ -59,7 +60,12 @@ struct ZoomedRoot: View {
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationWillFinishLaunching(_ notification: Notification) {
-        Socle.brand("hERALD", color: Color(red: 0xf3 / 255, green: 0x92 / 255, blue: 0))  // « h » dans l'orange du fanion du logo
+        let orange = Color(red: 0xf3 / 255, green: 0x92 / 255, blue: 0)
+        Socle.brand("hERALD", color: orange)  // « h » dans l'orange du fanion du logo
+        // Le splash part avant que SwiftUI ouvre la fenêtre principale, pour pouvoir la retenir jusqu'à t = 2 s.
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
+        Splash.shared.start(Splash.Config(title: "hERALD", subtitle: L.t("splash.subtitle"),
+                                          footer: version.isEmpty ? "" : "v" + version, accent: orange))
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
