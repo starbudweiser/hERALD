@@ -163,8 +163,8 @@ struct TrackingView: View {
                 Divider().overlay(Socle.C.border)
                 ScrollView {
                     LazyVStack(spacing: 0) {
-                        ForEach(rows) { p in
-                            TrackingRow(post: p, selected: p.id == selected) { selected = p.id }
+                        ForEach(Array(rows.enumerated()), id: \.element.id) { i, p in
+                            TrackingRow(post: p, selected: p.id == selected, striped: i % 2 == 1) { selected = p.id }
                         }
                     }
                 }
@@ -200,6 +200,8 @@ struct TrackingRow: View {
     @EnvironmentObject var store: Store
     let post: Post
     let selected: Bool
+    /// Une ligne sur deux a un fond légèrement différent pour suivre la ligne des yeux.
+    var striped = false
     let action: () -> Void
     @State private var hover = false
 
@@ -228,8 +230,10 @@ struct TrackingRow: View {
                 Text(post.feedback.isEmpty ? "—" : L.number(post.total(.comment)) + " 💬")
                     .socle(Socle.T.meta).foregroundStyle(Socle.C.textMuted).frame(width: 70, alignment: .trailing)
             }
+            // publication faite : texte estompé (le fond reste net pour garder l'alternance)
+            .opacity(post.status == .published && !selected && !hover ? 0.5 : 1)
             .padding(.horizontal, Socle.M.space3).padding(.vertical, Socle.M.space2)
-            .background(selected ? Socle.C.surfaceSelected : hover ? Socle.C.surfaceHover : .clear)
+            .background(selected ? Socle.C.surfaceSelected : hover ? Socle.C.surfaceHover : striped ? Socle.C.textStrong.opacity(0.045) : .clear)
             .overlay(alignment: .leading) { Rectangle().fill(selected ? Socle.C.accent : .clear).frame(width: 2) }
             .contentShape(Rectangle())
         }
