@@ -233,7 +233,7 @@ struct TrackingRow: View {
             // publication faite : texte estompé (le fond reste net pour garder l'alternance)
             .opacity(post.status == .published && !selected && !hover ? 0.5 : 1)
             .padding(.horizontal, Socle.M.space3).padding(.vertical, Socle.M.space2)
-            .background(selected ? Socle.C.surfaceSelected : hover ? Socle.C.surfaceHover : striped ? Socle.C.textStrong.opacity(0.045) : .clear)
+            .background(selected ? Socle.C.surfaceSelected : hover ? Socle.C.surfaceHover : striped ? Socle.C.textStrong.opacity(0.09) : .clear)
             .overlay(alignment: .leading) { Rectangle().fill(selected ? Socle.C.accent : .clear).frame(width: 2) }
             .contentShape(Rectangle())
         }
