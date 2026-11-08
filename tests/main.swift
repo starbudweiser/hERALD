@@ -290,7 +290,7 @@ check(AgentConfig().fxRate == 0 && (try! JSONDecoder().decode(AgentConfig.self, 
 
 var cfgS = AgentConfig(); cfgS.sessionID = "86f09b56-284f-4d83-a4e6-382a37ca4568"
 check(AgentContext.system(config: cfgS, campaign: ac).contains("claude --resume 86f09b56-284f-4d83-a4e6-382a37ca4568"), "l'agent connaît l'identifiant de sa session")
-check(!AgentContext.system(config: AgentConfig(), campaign: ac).contains("--resume"), "pas d'identifiant tant que la session n'existe pas")
+check(!AgentContext.system(config: AgentConfig(), campaign: ac).contains("This session's id"), "pas d'identifiant tant que la session n'existe pas")
 
 print(failures == 0 ? "OK : tous les tests passent" : "\(failures) échec(s)")
 exit(failures == 0 ? 0 : 1)
