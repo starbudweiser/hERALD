@@ -47,13 +47,28 @@ final class Presence: NSObject {
         it.button?.image = Self.silhouette()
         it.button?.imagePosition = .imageOnly
         it.button?.toolTip = "hERALD"
+        // pas de it.menu : sur certaines configurations (plusieurs écrans) macOS ouvre ce menu loin de l'icône ;
+        // hERALD le fait apparaître lui-même, juste sous l'icône
+        it.menu = nil
+        it.button?.target = self
+        it.button?.action = #selector(statusClicked)
+        it.button?.sendAction(on: [.leftMouseUp, .rightMouseUp])
+    }
+
+    private func makeMenu() -> NSMenu {
         let menu = NSMenu()
         let open = NSMenuItem(title: L.t("menubar.open"), action: #selector(showMain), keyEquivalent: "")
         let refresh = NSMenuItem(title: L.t("menubar.refresh"), action: #selector(doRefresh), keyEquivalent: "")
         let quit = NSMenuItem(title: L.t("menubar.quit"), action: #selector(quitApp), keyEquivalent: "")
         [open, refresh, quit].forEach { $0.target = self }
         menu.addItem(open); menu.addItem(refresh); menu.addItem(.separator()); menu.addItem(quit)
-        it.menu = menu
+        return menu
+    }
+
+    @objc private func statusClicked() {
+        guard let button = item?.button else { return }
+        let y = button.isFlipped ? button.bounds.maxY + 4 : -4
+        makeMenu().popUp(positioning: nil, at: NSPoint(x: 0, y: y), in: button)
     }
 
     /// Le fanion et ses ondes du logo, sans le carré sombre : fanion ambre, hampe grise, ondes bleues.
