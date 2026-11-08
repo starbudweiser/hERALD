@@ -273,7 +273,10 @@ enum StatsFetcher {
         guard !code.isEmpty else { return .failure(WatchError(message: L.t("stats.err.goatcounter"))) }
         let p = path == "TOTAL" ? "TOTAL" : (path.addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? path)
         guard let url = URL(string: "https://\(code).goatcounter.com/counter/\(p).json") else { return .failure(WatchError(message: L.t("stats.err.link"))) }
-        return await get(url).flatMap { j in
+        let r = await get(url)
+        // GoatCounter répond 404 pour une page qui n'a encore reçu aucune visite : c'est zéro, pas une erreur.
+        if case .failure(let e) = r, e.message == L.t("watch.http", 404), path != "TOTAL" { return .success(StatSnapshot(views: 0)) }
+        return r.flatMap { j in
             guard let n = int((j as? [String: Any])?["count"]) else { return .failure(WatchError(message: L.t("watch.parse"))) }
             return .success(StatSnapshot(views: n))
         }
