@@ -16,7 +16,7 @@ Turn it on in **Settings → AI agent (optional)**, then **Set up the agent…**
 | **Campaign instructions** | *Edit the campaign → Instructions for the agent*: tone, audience, constraints. Sent with every request. |
 | **Quick actions** | Buttons above the input (write the draft, improve the hook, translate, check before publishing, what next?). Edit them in the agent settings: one per line, `Title | instruction`. |
 | **Formatted answers** | Headings, lists, quotes, code blocks (with a Copy button), tables and rich text display properly. |
-| **Usage and cost** | Under each answer: tokens and cost. At the top of the panel: the running total for the chat and the campaign. With an API (ChatGPT…), set the prices ($ per million tokens) in the agent settings; without prices, only tokens are shown. With Claude Code, the cost (API equivalent, not billed with a subscription) comes from the agent. |
+| **Usage and cost** | Under each answer: tokens and cost. At the top of the panel: the running total for the chat and the campaign. The cost is shown in your Mac's currency (euro in France), converted at today's European Central Bank rate (free, no personal data sent) or at a rate you set; offline it stays in dollars. With an API (ChatGPT…), enter the prices in dollars (the providers' unit) per million tokens in the agent settings; without prices, only tokens are shown. With Claude Code, the cost (API equivalent, not billed with a subscription) comes from the agent. |
 | **Shared context** | Choose whether drafts, statistics and campaign notes are sent. The task sheet is always sent. |
 
 ## Why it shines with a local agent (Claude Code)

@@ -33,6 +33,8 @@ struct AgentConfig: Codable, Equatable {
     /// Tarifs de l'API en dollars par million de jetons (0 = inconnu : on affiche seulement les jetons).
     var priceIn = 0.0
     var priceOut = 0.0
+    /// Taux de change fixé à la main (devise du système pour 1 dollar) ; 0 = taux du jour automatique.
+    var fxRate = 0.0
     var workdir = ""
     /// Ce que hERALD joint à la question (la fiche de la tâche est toujours jointe).
     var shareDrafts = true
@@ -56,6 +58,7 @@ struct AgentConfig: Codable, Equatable {
         apiURL = try c.decodeIfPresent(String.self, forKey: .apiURL) ?? d.apiURL
         priceIn = try c.decodeIfPresent(Double.self, forKey: .priceIn) ?? d.priceIn
         priceOut = try c.decodeIfPresent(Double.self, forKey: .priceOut) ?? d.priceOut
+        fxRate = try c.decodeIfPresent(Double.self, forKey: .fxRate) ?? d.fxRate
         workdir = try c.decodeIfPresent(String.self, forKey: .workdir) ?? d.workdir
         shareDrafts = try c.decodeIfPresent(Bool.self, forKey: .shareDrafts) ?? d.shareDrafts
         shareStats = try c.decodeIfPresent(Bool.self, forKey: .shareStats) ?? d.shareStats
@@ -95,6 +98,48 @@ struct AgentUndo: Codable, Hashable {
     var old: String?
 }
 
+/// Devise du système (la région du Mac : euro en France) et taux de change depuis le dollar, unité des tarifs des fournisseurs.
+/// Taux du jour de la Banque centrale européenne via frankfurter.dev (gratuit, sans clé, aucune donnée personnelle envoyée),
+/// gardé 24 h ; un taux fixé à la main dans les réglages l'emporte.
+enum AgentCurrency {
+    static var code: String { Locale.current.currency?.identifier ?? "USD" }
+
+    private static let keyRate = "agentFxRate", keyDate = "agentFxDate", keyCode = "agentFxCode"
+
+    /// Taux connu pour passer des dollars à la devise du système (nil si inconnu).
+    static func rate(_ cfg: AgentConfig = AgentConfig.current) -> Double? {
+        if code == "USD" { return 1 }
+        if cfg.fxRate > 0 { return cfg.fxRate }
+        let d = UserDefaults.standard
+        guard d.string(forKey: keyCode) == code, d.double(forKey: keyRate) > 0 else { return nil }
+        return d.double(forKey: keyRate)
+    }
+
+    /// Met le taux à jour s'il a plus de 24 h. Renvoie vrai si une valeur nouvelle a été enregistrée.
+    @discardableResult
+    static func refreshIfNeeded() async -> Bool {
+        let d = UserDefaults.standard, c = code
+        if c == "USD" { return false }
+        if d.string(forKey: keyCode) == c, let t = d.object(forKey: keyDate) as? Date, Date().timeIntervalSince(t) < 86400 { return false }
+        guard let url = URL(string: "https://api.frankfurter.dev/v1/latest?base=USD&symbols=\(c)") else { return false }
+        var req = URLRequest(url: url, timeoutInterval: 15)
+        req.setValue("hERALD/\(Watcher.version)", forHTTPHeaderField: "User-Agent")
+        guard let (data, resp) = try? await URLSession.shared.data(for: req), (resp as? HTTPURLResponse)?.statusCode == 200,
+              let obj = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+              let r = (obj["rates"] as? [String: Any])?[c] as? Double, r > 0 else { return false }
+        d.set(r, forKey: keyRate); d.set(Date(), forKey: keyDate); d.set(c, forKey: keyCode)
+        return true
+    }
+
+    /// Montant en dollars → texte dans la devise donnée (ou en dollars si le taux est inconnu).
+    static func format(dollars: Double, code: String, rate: Double?, locale: Locale) -> String {
+        let useLocal = rate != nil && code != "USD"
+        let amount = useLocal ? dollars * (rate ?? 1) : dollars
+        let digits = amount < 0.1 ? 4 : 2
+        return amount.formatted(.currency(code: useLocal ? code : "USD").precision(.fractionLength(digits)).locale(locale))
+    }
+}
+
 /// Consommation d'une réponse : jetons et, si l'agent la donne ou si des tarifs sont réglés, son coût en dollars.
 struct AgentUsage: Codable, Hashable {
     var input = 0
@@ -122,9 +167,9 @@ struct AgentUsage: Codable, Hashable {
         return s
     }
 
+    /// Montant en dollars affiché dans la devise du système (euro en France), au taux du jour.
     static func money(_ d: Double) -> String {
-        let digits = d < 0.1 ? 4 : 2
-        return d.formatted(.currency(code: "USD").precision(.fractionLength(digits)).locale(L.locale))
+        AgentCurrency.format(dollars: d, code: AgentCurrency.code, rate: AgentCurrency.rate(), locale: Locale.current)
     }
 }
 
@@ -343,6 +388,9 @@ enum AgentContext {
         ```
         Only these fields exist: notes, status (never "published"), drafts per language (fr, en, es, it), campaign_notes_append. Omit what you do not change. Replace whole texts, do not send diffs.
         """
+        if config.kind == .claude, !config.sessionID.isEmpty {
+            s += "\n\nThis session's id is \(config.sessionID); the user resumes it with: cd \"\(config.workURL.path)\" && claude --resume \(config.sessionID)"
+        }
         if !campaign.agentBrief.isEmpty { s += "\n\nCampaign instructions from the user:\n\(campaign.agentBrief)" }
         return s
     }

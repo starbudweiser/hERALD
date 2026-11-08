@@ -51,6 +51,7 @@ struct AgentPanel: View {
         }
         .background(Socle.C.surface)
         .sheet(isPresented: $settings) { AgentSettingsView() }
+        .task { if await AgentCurrency.refreshIfNeeded() { store.objectWillChange.send() } }
     }
 
     // MARK: Poignée de redimensionnement
@@ -397,7 +398,7 @@ struct AgentSettingsView: View {
                     Field(label: L.t("agent.settings.price.in")) { TextField("0", value: $cfg.priceIn, format: .number).socleField() }
                     Field(label: L.t("agent.settings.price.out")) { TextField("0", value: $cfg.priceOut, format: .number).socleField() }
                 }
-                Text(L.t("agent.settings.price.note")).socle(Socle.T.meta).foregroundStyle(Socle.C.textSubtle).fixedSize(horizontal: false, vertical: true)
+                Text(L.t("agent.settings.price.note", AgentCurrency.code)).socle(Socle.T.meta).foregroundStyle(Socle.C.textSubtle).fixedSize(horizontal: false, vertical: true)
             }
             if cfg.kind == .claude {
                 Field(label: L.t("agent.settings.model")) { TextField(L.t("agent.settings.model.default"), text: $cfg.model).socleField() }
@@ -419,6 +420,12 @@ struct AgentSettingsView: View {
                     Toggle(L.t("agent.settings.share.notes"), isOn: $cfg.shareCampaignNotes)
                 }
                 Text(L.t("agent.settings.share.note")).socle(Socle.T.meta).foregroundStyle(Socle.C.textSubtle).fixedSize(horizontal: false, vertical: true)
+            }
+            if AgentCurrency.code != "USD" {
+                Field(label: L.t("agent.settings.fx", AgentCurrency.code)) {
+                    TextField(AgentCurrency.rate(AgentConfig()).map { String(format: "%.4f", $0) } ?? "0", value: $cfg.fxRate, format: .number).socleField().frame(width: 160)
+                    Text(L.t("agent.settings.fx.note", AgentCurrency.code)).socle(Socle.T.meta).foregroundStyle(Socle.C.textSubtle).fixedSize(horizontal: false, vertical: true)
+                }
             }
             Field(label: L.t("agent.settings.quick")) {
                 TextEditor(text: $cfg.quickPrompts).socle(Socle.T.monoSm).socleField(multiline: true).frame(height: 70)

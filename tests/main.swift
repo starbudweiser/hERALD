@@ -273,7 +273,24 @@ let ur = try! Storage.decode(try! Storage.encode(AppData(campaigns: [uc])))
 check(ur.campaigns[0].agentUsage.tokens == 1515, "usage enregistré et relu")
 
 check(ou.label(priced).contains("$") && ou.label(priced).contains("≈") && !ou.label(AgentConfig()).contains("$"), "affichage du coût seulement s'il est connu")
-check(AgentUsage.money(0.0042).contains("0,0042") || AgentUsage.money(0.0042).contains("0.0042"), "petit coût affiché avec 4 décimales")
+check(AgentUsage.money(0.0042).contains("0,0042") || AgentUsage.money(0.0042).contains("0.0042") || AgentUsage.money(0.0042).contains("0,0038") || AgentUsage.money(0.0042).contains("0.0038"), "petit coût affiché avec 4 décimales (dollars ou devise convertie)")
+
+// Devise du système : conversion depuis le dollar
+let frLoc = Locale(identifier: "fr_FR"), usLoc = Locale(identifier: "en_US")
+let eur = AgentCurrency.format(dollars: 0.0100, code: "EUR", rate: 0.9, locale: frLoc)
+check(eur.contains("€") && (eur.contains("0,0090")), "euro au taux donné, 4 décimales pour un petit montant : \(eur)")
+let eurBig = AgentCurrency.format(dollars: 12.5, code: "EUR", rate: 0.9, locale: frLoc)
+check(eurBig.contains("11,25") && eurBig.contains("€"), "montant courant avec 2 décimales : \(eurBig)")
+let usd = AgentCurrency.format(dollars: 12.5, code: "EUR", rate: nil, locale: frLoc)
+check(usd.contains("$") && usd.contains("12,50"), "taux inconnu : dollars, jamais un montant converti inventé : \(usd)")
+check(AgentCurrency.format(dollars: 1, code: "USD", rate: 1, locale: usLoc).contains("$1.00"), "dollars pour une région en dollars")
+var fixed = AgentConfig(); fixed.fxRate = 0.5
+check(AgentCurrency.code != "USD" ? AgentCurrency.rate(fixed) == 0.5 : AgentCurrency.rate(fixed) == 1, "taux fixé à la main prioritaire")
+check(AgentConfig().fxRate == 0 && (try! JSONDecoder().decode(AgentConfig.self, from: Data(#"{"fxRate": 0.8}"#.utf8))).fxRate == 0.8, "taux manuel enregistré et relu")
+
+var cfgS = AgentConfig(); cfgS.sessionID = "86f09b56-284f-4d83-a4e6-382a37ca4568"
+check(AgentContext.system(config: cfgS, campaign: ac).contains("claude --resume 86f09b56-284f-4d83-a4e6-382a37ca4568"), "l'agent connaît l'identifiant de sa session")
+check(!AgentContext.system(config: AgentConfig(), campaign: ac).contains("--resume"), "pas d'identifiant tant que la session n'existe pas")
 
 print(failures == 0 ? "OK : tous les tests passent" : "\(failures) échec(s)")
 exit(failures == 0 ? 0 : 1)
