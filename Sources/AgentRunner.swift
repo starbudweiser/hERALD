@@ -139,7 +139,7 @@ enum AgentRunner {
 
     /// Envoie un message dans la session « hERALD » (la crée si besoin). Renvoie la réponse et l'identifiant de la session.
     static func claude(_ cfg: AgentConfig, session: String, system: String, prompt: String,
-                       progress: (@Sendable (String) -> Void)? = nil) async throws -> (text: String, session: String) {
+                       progress: (@Sendable (String) -> Void)? = nil) async throws -> (text: String, session: String, usage: AgentUsage?) {
         guard let exe = claudeURL(cfg) else { throw AgentFailure(message: L.t("agent.err.noclaude")) }
         try await checkWorkFolder(cfg)
         let id = session.isEmpty ? UUID().uuidString.lowercased() : session
@@ -162,7 +162,7 @@ enum AgentRunner {
         if (obj["is_error"] as? Bool) == true || r.code != 0 {
             throw AgentFailure(message: shorten((obj["result"] as? String) ?? r.err))
         }
-        return ((obj["result"] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines), (obj["session_id"] as? String) ?? id)
+        return ((obj["result"] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines), (obj["session_id"] as? String) ?? id, usage(from: obj))
     }
 
     // MARK: Commande personnalisée (Codex, etc.) : la question arrive sur l'entrée standard, la réponse sort sur la sortie standard
@@ -177,7 +177,7 @@ enum AgentRunner {
 
     // MARK: API compatible OpenAI (ChatGPT, serveurs locaux…)
 
-    static func openai(_ cfg: AgentConfig, system: String, history: [AgentMessage], user: String) async throws -> String {
+    static func openai(_ cfg: AgentConfig, system: String, history: [AgentMessage], user: String) async throws -> (text: String, usage: AgentUsage?) {
         let key = Keychain.get("openai")
         guard !cfg.model.isEmpty, let url = URL(string: cfg.apiURL) else { throw AgentFailure(message: L.t("agent.err.noapi")) }
         var msgs: [[String: String]] = [["role": "system", "content": system]]
@@ -198,7 +198,22 @@ enum AgentRunner {
         guard let text = (((obj?["choices"] as? [[String: Any]])?.first?["message"]) as? [String: Any])?["content"] as? String else {
             throw AgentFailure(message: L.t("watch.parse"))
         }
-        return text.trimmingCharacters(in: .whitespacesAndNewlines)
+        return (text.trimmingCharacters(in: .whitespacesAndNewlines), usage(from: obj ?? [:]))
+    }
+
+    /// Usage lu dans la réponse de Claude Code (événement « result ») ou d'une API OpenAI (« usage »).
+    static func usage(from obj: [String: Any]) -> AgentUsage? {
+        func int(_ v: Any?) -> Int { (v as? Int) ?? (v as? NSNumber)?.intValue ?? 0 }
+        guard let u = obj["usage"] as? [String: Any] else { return nil }
+        var out = AgentUsage()
+        if u["prompt_tokens"] != nil || u["completion_tokens"] != nil {            // format OpenAI
+            out.input = int(u["prompt_tokens"]); out.output = int(u["completion_tokens"])
+        } else {                                                                      // format Claude Code (cache compris)
+            out.input = int(u["input_tokens"]) + int(u["cache_creation_input_tokens"]) + int(u["cache_read_input_tokens"])
+            out.output = int(u["output_tokens"])
+        }
+        out.cost = (obj["total_cost_usd"] as? Double) ?? (obj["total_cost_usd"] as? NSNumber)?.doubleValue
+        return out.tokens == 0 && out.cost == nil ? nil : out
     }
 
     static func shorten(_ s: String) -> String {

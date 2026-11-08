@@ -58,6 +58,7 @@ extension Store {
         let system = AgentContext.system(config: cfg, campaign: camp)
         do {
             var reply: String
+            var usage: AgentUsage?
             switch cfg.kind {
             case .claude:
                 var parts: [String] = []
@@ -66,19 +67,20 @@ extension Store {
                 let r = try await AgentRunner.claude(cfg, session: cfg.sessionID, system: system,
                                                      prompt: AgentContext.message(question: q, context: parts.isEmpty ? nil : parts.joined(separator: "\n")),
                                                      progress: progress)
-                reply = r.text
+                reply = r.text; usage = r.usage
                 if cfg.sessionID != r.session { var c = AgentConfig.current; c.sessionID = r.session; AgentConfig.current = c }
             case .command:
                 reply = try await AgentRunner.command(cfg, prompt: AgentContext.transcript(system: system, context: campBlock + "\n" + postBlock,
                                                                                             history: before.messages, question: q))
             case .openai:
-                reply = try await AgentRunner.openai(cfg, system: system, history: before.messages,
+                let r = try await AgentRunner.openai(cfg, system: system, history: before.messages,
                                                      user: AgentContext.message(question: q, context: campBlock + "\n" + postBlock))
+                reply = r.text; usage = r.usage
             }
             let parsed = AgentParse.sessions(reply)
             reply = parsed.clean
             mutateThread(t, ci) { th in
-                th.messages.append(AgentMessage(role: .assistant, text: reply))
+                th.messages.append(AgentMessage(role: .assistant, text: reply, usage: usage))
                 if let postHash { th.contextHash = postHash }
             }
             // contexte de campagne envoyé : mémorisé sur la discussion de campagne

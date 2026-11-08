@@ -93,7 +93,18 @@ struct AgentPanel: View {
             if let t = target {
                 Text(store.agentTitle(t)).socle(Socle.T.heading).foregroundStyle(Socle.C.textStrong).lineLimit(2)
                 if cfg.kind == .claude, cfg.isReady { sessionLine(store.agentThread(t)) }
+                usageLine(t)
             }
+        }
+    }
+
+    /// Consommation cumulée de cette discussion et de toute la campagne (jetons, et coût quand on le connaît).
+    @ViewBuilder private func usageLine(_ t: AgentTarget) -> some View {
+        let mine = store.agentThread(t).usage, all = store.campaign.agentUsage
+        if all.tokens > 0 || all.cost != nil {
+            Text(L.t("agent.usage.total", mine.label(cfg), all.label(cfg)))
+                .socle(Socle.T.caption).foregroundStyle(Socle.C.textSubtle).fixedSize(horizontal: false, vertical: true)
+                .help(cfg.kind == .claude ? L.t("agent.usage.note") : "")
         }
     }
 
@@ -237,11 +248,21 @@ struct AgentBubble: View {
             if isUser { Spacer(minLength: 40) }
             VStack(alignment: .leading, spacing: Socle.M.space2) {
                 if !parsed.text.isEmpty {
-                    Text(md(parsed.text)).socle(Socle.T.body).foregroundStyle(Socle.C.text).textSelection(.enabled)
-                        .fixedSize(horizontal: false, vertical: true)
+                    if isUser {
+                        Text(md(parsed.text)).socle(Socle.T.body).foregroundStyle(Socle.C.text).textSelection(.enabled)
+                            .fixedSize(horizontal: false, vertical: true)
+                    } else {
+                        MarkdownView(text: parsed.text)
+                    }
                 }
                 if let p = parsed.proposal { proposal(p) }
-                Text(L.date(message.date)).socle(Socle.T.caption).foregroundStyle(Socle.C.textDisabled)
+                HStack(spacing: Socle.M.space2) {
+                    Text(L.date(message.date)).socle(Socle.T.caption).foregroundStyle(Socle.C.textDisabled)
+                    if let u = message.usage {
+                        Text(u.label(AgentConfig.current)).socle(Socle.T.caption).foregroundStyle(Socle.C.textDisabled)
+                            .help(AgentConfig.current.kind == .claude ? L.t("agent.usage.note") : "")
+                    }
+                }
             }
             .padding(Socle.M.space3)
             .background(isUser ? Socle.C.surfaceSelected : Socle.C.bg, in: RoundedRectangle(cornerRadius: Socle.M.radiusMd))
@@ -372,6 +393,11 @@ struct AgentSettingsView: View {
                     Field(label: L.t("agent.settings.model")) { TextField("", text: $cfg.model).socleField() }
                     Field(label: L.t("agent.settings.apikey")) { SecureField("", text: $apiKey).socleField() }
                 }
+                HStack(alignment: .top, spacing: Socle.M.space3) {
+                    Field(label: L.t("agent.settings.price.in")) { TextField("0", value: $cfg.priceIn, format: .number).socleField() }
+                    Field(label: L.t("agent.settings.price.out")) { TextField("0", value: $cfg.priceOut, format: .number).socleField() }
+                }
+                Text(L.t("agent.settings.price.note")).socle(Socle.T.meta).foregroundStyle(Socle.C.textSubtle).fixedSize(horizontal: false, vertical: true)
             }
             if cfg.kind == .claude {
                 Field(label: L.t("agent.settings.model")) { TextField(L.t("agent.settings.model.default"), text: $cfg.model).socleField() }

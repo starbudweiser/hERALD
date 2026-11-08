@@ -30,6 +30,9 @@ struct AgentConfig: Codable, Equatable {
     var command = ""
     var model = ""
     var apiURL = "https://api.openai.com/v1/chat/completions"
+    /// Tarifs de l'API en dollars par million de jetons (0 = inconnu : on affiche seulement les jetons).
+    var priceIn = 0.0
+    var priceOut = 0.0
     var workdir = ""
     /// Ce que hERALD joint à la question (la fiche de la tâche est toujours jointe).
     var shareDrafts = true
@@ -51,6 +54,8 @@ struct AgentConfig: Codable, Equatable {
         command = try c.decodeIfPresent(String.self, forKey: .command) ?? d.command
         model = try c.decodeIfPresent(String.self, forKey: .model) ?? d.model
         apiURL = try c.decodeIfPresent(String.self, forKey: .apiURL) ?? d.apiURL
+        priceIn = try c.decodeIfPresent(Double.self, forKey: .priceIn) ?? d.priceIn
+        priceOut = try c.decodeIfPresent(Double.self, forKey: .priceOut) ?? d.priceOut
         workdir = try c.decodeIfPresent(String.self, forKey: .workdir) ?? d.workdir
         shareDrafts = try c.decodeIfPresent(Bool.self, forKey: .shareDrafts) ?? d.shareDrafts
         shareStats = try c.decodeIfPresent(Bool.self, forKey: .shareStats) ?? d.shareStats
@@ -90,6 +95,39 @@ struct AgentUndo: Codable, Hashable {
     var old: String?
 }
 
+/// Consommation d'une réponse : jetons et, si l'agent la donne ou si des tarifs sont réglés, son coût en dollars.
+struct AgentUsage: Codable, Hashable {
+    var input = 0
+    var output = 0
+    /// Coût annoncé par l'agent (Claude Code : équivalent API, non facturé avec un abonnement).
+    var cost: Double?
+
+    var tokens: Int { input + output }
+
+    /// Coût affiché : celui de l'agent, sinon calculé avec les tarifs réglés (dollars par million de jetons).
+    func dollars(_ cfg: AgentConfig) -> Double? {
+        if let cost { return cost }
+        guard cfg.priceIn > 0 || cfg.priceOut > 0 else { return nil }
+        return (Double(input) * cfg.priceIn + Double(output) * cfg.priceOut) / 1_000_000
+    }
+
+    static func + (a: AgentUsage, b: AgentUsage) -> AgentUsage {
+        AgentUsage(input: a.input + b.input, output: a.output + b.output, cost: (a.cost == nil && b.cost == nil) ? nil : (a.cost ?? 0) + (b.cost ?? 0))
+    }
+
+    /// Phrase courte : « 1 234 jetons · ≈ 0,0042 $ ».
+    func label(_ cfg: AgentConfig) -> String {
+        var s = L.t("agent.usage.tokens", L.number(tokens))
+        if let d = dollars(cfg) { s += " · ≈ " + AgentUsage.money(d) }
+        return s
+    }
+
+    static func money(_ d: Double) -> String {
+        let digits = d < 0.1 ? 4 : 2
+        return d.formatted(.currency(code: "USD").precision(.fractionLength(digits)).locale(L.locale))
+    }
+}
+
 struct AgentMessage: Codable, Identifiable, Hashable {
     enum Role: String, Codable { case user, assistant }
     var id = UUID()
@@ -100,6 +138,19 @@ struct AgentMessage: Codable, Identifiable, Hashable {
     var applied: Date?
     var undo: [AgentUndo]?
     var dismissed: Bool?
+    var usage: AgentUsage?
+}
+
+extension Campaign {
+    /// Consommation de toute la campagne (sa discussion et celles de ses tâches).
+    var agentUsage: AgentUsage {
+        let all = (agent?.messages ?? []) + posts.flatMap { $0.agent?.messages ?? [] }
+        return all.compactMap(\.usage).reduce(AgentUsage(), +)
+    }
+}
+
+extension AgentThread {
+    var usage: AgentUsage { messages.compactMap(\.usage).reduce(AgentUsage(), +) }
 }
 
 /// Sous-session ouverte par l'agent pour traiter une demande (il l'annonce dans un bloc herald-session).

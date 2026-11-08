@@ -217,5 +217,63 @@ check(AgentRunner.status(fromStreamLine: toolLine)?.contains("plan.md") == true,
 check(AgentRunner.status(fromStreamLine: #"{"type":"assistant","message":{"content":[{"type":"text","text":"Bonjour"}]}}"#) != nil, "avancement : rédaction")
 check(AgentRunner.status(fromStreamLine: #"{"type":"result","result":"ok"}"#) == nil && AgentRunner.status(fromStreamLine: "pas du json") == nil, "lignes sans avancement ignorées")
 
+// Markdown des réponses
+let md = Markdown.parse("""
+# Titre
+Un paragraphe avec **gras** et `code`,
+sur deux lignes.
+
+- premier
+  suite du premier
+- deuxième
+  - sous-élément
+1. un
+2. deux
+
+> citation
+> sur deux lignes
+
+```swift
+let x = 1
+```
+
+| Canal | Vues |
+|---|---:|
+| YouTube | 120 |
+| Reddit | 45 |
+
+---
+Fin
+""")
+check(md.first == .heading(1, "Titre"), "titre")
+check(md.contains(.paragraph("Un paragraphe avec **gras** et `code`,\nsur deux lignes.")), "paragraphe sur deux lignes")
+check(md.contains { if case .list(let it) = $0 { return it.count == 3 && it[0].text == "premier\nsuite du premier" && it[2].level == 1 } else { return false } }, "liste à puces, suite de ligne et sous-niveau")
+check(md.contains { if case .list(let it) = $0 { return it.count == 2 && it[0].number == 1 && it[1].number == 2 } else { return false } }, "liste numérotée")
+check(md.contains(.quote("citation\nsur deux lignes")), "citation")
+check(md.contains(.code(lang: "swift", text: "let x = 1")), "bloc de code")
+check(md.contains(.table(header: ["Canal", "Vues"], rows: [["YouTube", "120"], ["Reddit", "45"]])), "tableau")
+check(md.contains(.rule) && md.last == .paragraph("Fin"), "filet puis paragraphe")
+check(Markdown.parse("```\nsans fin") == [.code(lang: "", text: "sans fin")], "bloc de code jamais refermé")
+check(Markdown.parse("") .isEmpty && Markdown.parse("\n\n").isEmpty, "texte vide")
+// usage et coût
+let claudeObj = try! JSONSerialization.jsonObject(with: Data(#"{"total_cost_usd": 0.028, "usage": {"input_tokens": 2, "cache_creation_input_tokens": 7028, "cache_read_input_tokens": 100, "output_tokens": 5}}"#.utf8)) as! [String: Any]
+let cu = AgentRunner.usage(from: claudeObj)!
+check(cu.input == 7130 && cu.output == 5 && cu.cost == 0.028, "usage Claude Code (cache compris)")
+let oaObj = try! JSONSerialization.jsonObject(with: Data(#"{"usage": {"prompt_tokens": 1200, "completion_tokens": 300, "total_tokens": 1500}}"#.utf8)) as! [String: Any]
+let ou = AgentRunner.usage(from: oaObj)!
+check(ou.input == 1200 && ou.output == 300 && ou.cost == nil, "usage API OpenAI")
+check(AgentRunner.usage(from: ["result": "x"]) == nil, "réponse sans usage")
+var priced = AgentConfig(); priced.priceIn = 2.5; priced.priceOut = 10
+check(abs((ou.dollars(priced) ?? 0) - 0.006) < 1e-9, "coût calculé avec les tarifs")
+check(ou.dollars(AgentConfig()) == nil && cu.dollars(AgentConfig()) == 0.028, "sans tarifs : pas de coût inventé ; coût de l'agent repris tel quel")
+var uc = Campaign(name: "U"); var up = Post(); up.agent = AgentThread(messages: [AgentMessage(role: .assistant, text: "a", usage: ou)])
+uc.posts = [up]; uc.agent = AgentThread(messages: [AgentMessage(role: .assistant, text: "b", usage: AgentUsage(input: 10, output: 5, cost: nil))])
+check(uc.agentUsage.tokens == 1515 && uc.agent!.usage.tokens == 15, "cumul de la campagne et de la discussion")
+let ur = try! Storage.decode(try! Storage.encode(AppData(campaigns: [uc])))
+check(ur.campaigns[0].agentUsage.tokens == 1515, "usage enregistré et relu")
+
+check(ou.label(priced).contains("$") && ou.label(priced).contains("≈") && !ou.label(AgentConfig()).contains("$"), "affichage du coût seulement s'il est connu")
+check(AgentUsage.money(0.0042).contains("0,0042") || AgentUsage.money(0.0042).contains("0.0042"), "petit coût affiché avec 4 décimales")
+
 print(failures == 0 ? "OK : tous les tests passent" : "\(failures) échec(s)")
 exit(failures == 0 ? 0 : 1)

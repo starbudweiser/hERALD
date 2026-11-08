@@ -15,6 +15,8 @@ Activez-le dans **Réglages → Agent IA (facultatif)**, puis **Configurer l'age
 | **Limites strictes** | L'agent ne publie jamais, ne marque jamais une publication « Publié » (toute proposition en ce sens est ignorée) et ne peut modifier aucun autre champ. |
 | **Consignes de campagne** | *Modifier la campagne → Consignes pour l'agent* : ton, public, contraintes. Envoyées à chaque demande. |
 | **Actions rapides** | Boutons au-dessus de la saisie (rédiger, améliorer l'accroche, traduire, vérifier avant publication, et ensuite ?). Modifiables dans les réglages de l'agent : une par ligne, `Titre | consigne`. |
+| **Réponses mises en forme** | Titres, listes, citations, blocs de code (avec bouton Copier), tableaux et texte enrichi s'affichent correctement. |
+| **Consommation et coût** | Sous chaque réponse : jetons et coût. En haut du volet : le cumul de la discussion et de la campagne. Avec une API (ChatGPT…), réglez les tarifs ($ par million de jetons) dans les réglages de l'agent ; sans tarifs, seuls les jetons s'affichent. Avec Claude Code, le coût (équivalent API, non facturé avec un abonnement) est donné par l'agent. |
 | **Contexte partagé** | Choisissez si les brouillons, les statistiques et les notes de campagne sont envoyés. La fiche de la tâche l'est toujours. |
 
 ## Pourquoi c'est précieux avec un agent local (Claude Code)
