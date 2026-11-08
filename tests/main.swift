@@ -148,5 +148,58 @@ check(!all.curve.isEmpty && all.markdown(title: "Test").contains("| YouTube · V
 let oldPlan = #"{"format":1,"campaigns":[{"id":"\#(UUID().uuidString)","name":"A","eventDate":"2026-11-11T11:00:00Z","notes":"","milestones":[],"posts":[{"id":"\#(UUID().uuidString)","title":"P","date":"2026-11-08T11:00:00Z","status":"idea","link":"","notes":"","drafts":{},"feedback":[]}]}],"channels":[],"watch":[]}"#
 check((try? Storage.decode(Data(oldPlan.utf8)))?.campaigns[0].posts[0].stats == nil, "ancien plan relu sans statistiques")
 
+// Agent IA : propositions, garde-fous, annulation, sous-sessions, relecture tolérante
+var ac = Campaign(name: "Camp"); ac.notes = "Notes de départ"
+var ap1 = Post(); ap1.title = "Annonce"; ap1.notes = "anciennes notes"; ap1.drafts["fr"] = "ancien brouillon"
+var ap2 = Post(); ap2.title = "Rappel J-1"
+ac.posts = [ap1, ap2]
+let reply = """
+Voici une proposition.
+```herald-proposal
+{"summary": "Brouillons", "changes": [
+ {"post": "Annonce", "notes": "nouvelles notes", "status": "draft", "drafts": {"fr": "nouveau FR", "en": "new EN", "xx": "ignoré"}, "why": "plus clair"},
+ {"post": "Rappel", "status": "published"},
+ {"post": "Inconnue", "notes": "x"}],
+ "campaign_notes_append": "Décision : ton sobre."}
+```
+Dites-moi si ça convient.
+"""
+let split = AgentParse.split(reply)
+check(split.text.contains("Voici") && split.text.contains("convient") && !split.text.contains("herald-proposal"), "bloc retiré du texte")
+check(split.proposal?.changes.count == 3 && split.proposal?.changes[0].drafts.count == 2, "langues inconnues écartées")
+var worked = ac
+let res = AgentParse.apply(split.proposal!, to: &worked, current: nil)
+check(worked.posts[0].notes == "nouvelles notes" && worked.posts[0].status == .draft && worked.posts[0].drafts["en"] == "new EN", "proposition appliquée")
+check(worked.posts[1].status != .published, "« Publié » jamais appliqué par l'agent")
+check(worked.notes.hasSuffix("Décision : ton sobre.") && worked.notes.hasPrefix("Notes de départ"), "notes de campagne complétées, pas remplacées")
+check(res.lines.contains { $0.contains("Inconnue") }, "publication introuvable signalée")
+AgentParse.revert(res.undo, in: &worked)
+check(worked.posts[0].notes == "anciennes notes" && worked.posts[0].drafts["fr"] == "ancien brouillon" && worked.posts[0].drafts["en"] == nil
+      && worked.posts[0].status == .idea && worked.notes == "Notes de départ", "annulation complète")
+check(AgentParse.find("Rappel", in: ac, current: nil) == 1 && AgentParse.find(nil, in: ac, current: ap2.id) == 1, "publication retrouvée (titre partiel, ou celle en cours)")
+let sid = UUID().uuidString.lowercased()
+let sub = AgentParse.sessions("Fait.\n```herald-session\n{\"id\": \"\(sid)\", \"name\": \"hERALD › Annonce\", \"task\": \"Annonce\"}\n```\n```herald-session\n{\"id\": \"pas-un-uuid\"}\n```")
+check(sub.items.count == 1 && sub.items[0].id == sid && sub.clean == "Fait.", "sous-session annoncée, identifiant invalide refusé")
+check(AgentParse.split("Rien à proposer.").proposal == nil, "réponse sans proposition")
+// contexte : une tâche seule, sans rien de propre à une campagne précise
+let cfgA = AgentConfig()
+let sys = AgentContext.system(config: cfgA, campaign: ac)
+check(sys.contains("never publish") && sys.contains("herald-proposal") && sys.contains("hERALD") && !sys.lowercased().contains("skyrim"), "consignes génériques")
+let blk = AgentContext.postBlock(ap1, in: ac, config: cfgA, channel: { _ in "Canal" })
+check(blk.contains(ap1.id.uuidString) && blk.contains("Annonce") && blk.contains("ancien brouillon"), "fiche de la tâche")
+var cfgB = AgentConfig(); cfgB.shareDrafts = false
+check(!AgentContext.postBlock(ap1, in: ac, config: cfgB, channel: { _ in "Canal" }).contains("ancien brouillon"), "brouillons non joints si désactivé")
+check(AgentContext.hash("a") == AgentContext.hash("a") && AgentContext.hash("a") != AgentContext.hash("b"), "empreinte stable")
+check(AgentConfig().enabled == false && AgentConfig.isEnabled(Data()) == false, "agent désactivé par défaut")
+let partial = try! JSONDecoder().decode(AgentConfig.self, from: Data(#"{"enabled": true, "model": "m"}"#.utf8))
+check(partial.enabled && partial.model == "m" && partial.sessionName == "hERALD" && partial.shareStats, "réglages partiels relus avec défauts")
+check(AgentConfig().quick.count == 5, "actions rapides par défaut")
+var cfgQ = AgentConfig(); cfgQ.quickPrompts = "Court | fais court\nligne sans barre"
+check(cfgQ.quick.count == 1 && cfgQ.quick[0].title == "Court", "actions rapides personnalisées")
+var threaded = ac; threaded.agent = AgentThread(messages: [AgentMessage(role: .user, text: "q")], subSessions: [AgentSubSession(id: sid, name: "n")], contextHash: "h")
+threaded.brief = nil; threaded.agentBrief = "Ton sobre"
+let rt = try! Storage.decode(try! Storage.encode(AppData(campaigns: [threaded])))
+check(rt.campaigns[0].agent?.subSessions.first?.id == sid && rt.campaigns[0].agentBrief == "Ton sobre", "fils et consignes enregistrés")
+
 print(failures == 0 ? "OK : tous les tests passent" : "\(failures) échec(s)")
 exit(failures == 0 ? 0 : 1)

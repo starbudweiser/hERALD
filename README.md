@@ -10,6 +10,21 @@
 
 **Golden rule:** hERALD prepares and tracks. It never posts, never sends a message: you copy the text and publish it yourself.
 
+### ✨ Talk to your AI agent, from inside your plan (optional)
+
+Switch it on in *Settings → AI agent* and every task of your plan gets a chat with the agent of your choice: **Claude Code**, **Codex or any command-line agent**, or **ChatGPT / any OpenAI-compatible API**. hERALD works exactly the same without it: it is off by default, and nothing changes for you if you never use it.
+
+**Why it is worth it if you run a local AI agent** (Claude Code on your Mac, for instance):
+- **One home for everything.** Every request lands in a single, named Claude Code session ("hERALD"). Open Claude Code later and the whole conversation is there: ask in hERALD, continue in Claude Code, or the other way round.
+- **The agent finds the task by itself.** hERALD sends the task sheet (title, date, channel, status, notes, link, drafts, statistics) with your question, plus the plan and the campaign notes whenever they changed. "Rewrite this one for Reddit" is enough.
+- **It knows your files.** A local agent can read the folder you give it: videos, scripts, press kit, notes. It checks facts instead of guessing them.
+- **Sub-sessions for big jobs.** The agent can open a sub-session for a long piece of work (translate everything, prepare a press kit) and hERALD links it to the task, so you can resume it later.
+- **You stay in charge.** The agent reads and advises. Its proposed changes (notes, drafts in four languages, status) appear as a card with a preview: one click applies them, one click undoes them. It can never mark a post "published" and never publishes anything.
+- **Made for your campaign.** Write instructions once (tone, audience, constraints), edit the quick actions (write the draft, improve the hook, translate, check before publishing), choose what is shared: drafts, statistics, campaign notes.
+- **Private and cheap.** Everything stays on your Mac, sent only to the agent you chose. With Claude Code, a light mode (on by default) starts it without your MCP servers, skills and hooks: a request costs about a hundred times fewer tokens.
+
+Details, setup and tips: [docs/AI_AGENT.md](docs/AI_AGENT.md).
+
 - **Plan**: campaigns with an event date and countdown, dated milestones (teaser, D-day announcement, follow-up), posts per channel (Nexus, Reddit, Discord, YouTube, GitHub, X/Bluesky, Instagram, forums) with status *idea → draft → approved → published* and link. Month calendar and tracking table.
 - **Drafts** per post in French, English, Spanish and Italian, copied in one click.
 - **Monitoring**: watch GitHub releases and Nexus mod pages (read only, public APIs; the optional Nexus API key stays in the macOS keychain). Checked automatically once a week at launch; weekly report readable in the app and copyable as Markdown.
@@ -64,7 +79,22 @@ Build: `./build_app.sh` · tests: `tests/run_tests.sh`
 ---
 ## 🇫🇷 Français
 
-**Règle d'or :** hERALD prépare et suit. Il ne publie jamais et n'envoie aucun message : vous copiez le texte et publiez vous-même.
+**Règle d'or :** hERALD prépare et suit. Il ne publie jamais, n'envoie aucun message : vous copiez le texte et publiez vous-même.
+
+### ✨ Discutez avec votre agent IA, depuis votre plan (facultatif)
+
+Activez-le dans *Réglages → Agent IA* : chaque tâche de votre plan a une discussion avec l'agent de votre choix, **Claude Code**, **Codex ou tout agent en ligne de commande**, ou **ChatGPT / toute API compatible OpenAI**. hERALD fonctionne exactement pareil sans lui : il est désactivé par défaut, et rien ne change si vous ne l'utilisez jamais.
+
+**Pourquoi c'est précieux si vous avez un agent IA local** (Claude Code sur votre Mac, par exemple) :
+- **Un seul endroit pour tout.** Chaque demande arrive dans une seule session Claude Code nommée (« hERALD »). Rouvrez Claude Code plus tard : toute la conversation y est. Demandez dans hERALD, poursuivez dans Claude Code, ou l'inverse.
+- **L'agent retrouve la tâche tout seul.** hERALD joint à votre question la fiche de la tâche (titre, date, canal, statut, notes, lien, brouillons, statistiques), plus le plan et les notes de campagne quand ils ont changé. « Réécris celle-ci pour Reddit » suffit.
+- **Il connaît vos fichiers.** Un agent local peut lire le dossier que vous lui donnez : vidéos, scripts, dossier de presse, notes. Il vérifie les faits au lieu de les deviner.
+- **Des sous-sessions pour les gros travaux.** L'agent peut ouvrir une sous-session pour un long travail (tout traduire, préparer un dossier de presse) ; hERALD la rattache à la tâche pour que vous puissiez la reprendre.
+- **Vous gardez la main.** L'agent lit et conseille. Ses propositions de modifications (notes, brouillons en quatre langues, statut) s'affichent dans une carte avec aperçu : un clic les applique, un clic les annule. Il ne peut jamais marquer une publication « publiée » et ne publie rien.
+- **Adapté à votre campagne.** Écrivez une fois des consignes (ton, public, contraintes), modifiez les actions rapides (rédiger, améliorer l'accroche, traduire, vérifier avant publication), choisissez ce qui est partagé : brouillons, statistiques, notes de campagne.
+- **Privé et économe.** Tout reste sur votre Mac, envoyé seulement à l'agent choisi. Avec Claude Code, un mode léger (activé par défaut) le démarre sans vos serveurs MCP, skills et hooks : une demande consomme environ cent fois moins de jetons.
+
+Détails, réglages et astuces : [docs/AGENT_IA.md](docs/AGENT_IA.md).
 
 - **Plan** : campagnes avec date d'événement et compte à rebours, jalons datés (teaser, annonce du Jour J, suivi), publications par canal avec statut *idée → brouillon → validé → publié* et lien. Calendrier du mois et tableau de suivi.
 - **Brouillons** par publication en français, anglais, espagnol et italien, copiés en un clic.

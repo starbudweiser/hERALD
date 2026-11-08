@@ -197,6 +197,9 @@ final class Store: ObservableObject {
     // MARK: Statistiques
 
     @Published var statsChecking = false
+    /// Dialogue avec l'agent IA : demandes en cours et dernière erreur par discussion.
+    @Published var agentBusy: Set<AgentTarget> = []
+    @Published var agentError: [AgentTarget: String] = [:]
     private var statsTimer: Timer?
 
     /// Domaine du site (pour reconnaître ses pages dans les liens) et code GoatCounter.

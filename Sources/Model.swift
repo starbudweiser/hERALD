@@ -84,6 +84,7 @@ struct Post: Codable, Identifiable, Hashable {
     /// Relevés de statistiques (facultatifs : absents des anciens plans).
     var stats: [StatSnapshot]?
     var statsError: String?
+    var agent: AgentThread?
 
     func draft(_ l: Lang) -> String { drafts[l.rawValue] ?? "" }
 
@@ -102,6 +103,14 @@ struct Campaign: Codable, Identifiable, Hashable {
     var notes = ""
     var milestones: [Milestone] = []
     var posts: [Post] = []
+    /// Consignes permanentes pour l'agent IA (ton, public, contraintes propres à la campagne).
+    var brief: String?
+    var agent: AgentThread?
+    /// Lecture simple du brief (le champ enregistré est facultatif pour relire les anciens plans).
+    var agentBrief: String {
+        get { brief ?? "" }
+        set { brief = newValue.isEmpty ? nil : newValue }
+    }
 }
 
 enum WatchKind: String, Codable, CaseIterable, Identifiable {

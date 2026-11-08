@@ -264,6 +264,8 @@ struct HeaderBar: View {
     @Binding var editing: Bool
     @Binding var settings: Bool
     @State private var problem: String?
+    @State private var agentChat = false
+    @AppStorage(AgentConfig.key) private var agentRaw = Data()
 
     var body: some View {
         HStack(spacing: Socle.M.space2) {
@@ -287,6 +289,11 @@ struct HeaderBar: View {
                 Button(L.t("menu.sample")) { store.addSample() }
             } label: { Text(L.t("menu.plan")) }
                 .menuStyle(.borderlessButton).fixedSize()
+            if AgentConfig.isEnabled(agentRaw) {
+                Button(L.t("agent.button")) { agentChat = true }
+                    .buttonStyle(SocleButtonStyle(.secondary, height: Socle.M.sizeControl)).fixedSize()
+                    .disabled(!store.hasCampaign)
+            }
             Button(L.t("campaign.edit")) { editing = true }
                 .buttonStyle(SocleButtonStyle(.secondary, height: Socle.M.sizeControl)).fixedSize()
                 .disabled(!store.hasCampaign)
@@ -297,6 +304,7 @@ struct HeaderBar: View {
         .padding(.horizontal, Socle.M.space3)
         .frame(minHeight: Socle.M.sizeBar + 8)
         .background(Socle.C.surfaceRaised)
+        .sheet(isPresented: $agentChat) { AgentView(target: .campaign).environmentObject(store) }
     }
 }
 
@@ -340,6 +348,13 @@ struct CampaignSheet: View {
             }
             Field(label: L.t("campaign.notes")) {
                 TextEditor(text: $store.campaign.notes).socle(Socle.T.body).socleField(multiline: true).frame(height: 80)
+            }
+            if AgentConfig.current.enabled {
+                Field(label: L.t("agent.brief")) {
+                    TextEditor(text: Binding(get: { store.campaign.agentBrief }, set: { store.campaign.agentBrief = $0 }))
+                        .socle(Socle.T.body).socleField(multiline: true).frame(height: 70)
+                    Text(L.t("agent.brief.note")).socle(Socle.T.meta).foregroundStyle(Socle.C.textSubtle).fixedSize(horizontal: false, vertical: true)
+                }
             }
             HStack {
                 Text(L.t("milestones.title").uppercased()).socle(Socle.T.eyebrow).foregroundStyle(Socle.C.textSubtle)
@@ -388,6 +403,8 @@ struct SettingsView: View {
     @State private var key = Keychain.get("nexus")
     @State private var youtubeKey = Keychain.get("youtube")
     @State private var iconMode = IconMode.current
+    @State private var agentOn = AgentConfig.current.enabled
+    @State private var agentSettings = false
     @State private var domain = ""
     @State private var goat = ""
 
@@ -418,6 +435,16 @@ struct SettingsView: View {
             Field(label: L.t("settings.icon")) {
                 SocleSegmented(options: IconMode.allCases, selection: iconMode, label: \.label, onSelect: { iconMode = $0 })
                 Text(L.t("settings.icon.note")).socle(Socle.T.meta).foregroundStyle(Socle.C.textSubtle)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Field(label: L.t("agent.option.title")) {
+                HStack(spacing: Socle.M.space3) {
+                    Toggle(L.t("agent.option.enable"), isOn: $agentOn)
+                    Spacer(minLength: 0)
+                    Button(L.t("agent.configure")) { agentSettings = true }
+                        .buttonStyle(SocleButtonStyle(.secondary, height: Socle.M.sizeControl)).fixedSize()
+                }
+                Text(L.t("agent.option.note")).socle(Socle.T.meta).foregroundStyle(Socle.C.textSubtle)
                     .fixedSize(horizontal: false, vertical: true)
             }
             Field(label: L.t("settings.data")) {
@@ -456,6 +483,7 @@ struct SettingsView: View {
                     Keychain.set(youtubeKey.trimmingCharacters(in: .whitespacesAndNewlines), "youtube")
                     store.data.siteDomain = SiteInput.domain(domain)
                     store.data.goatcounter = SiteInput.goatcounter(goat)
+                    var ac = AgentConfig.current; ac.enabled = agentOn; AgentConfig.current = ac
                     IconMode.current = iconMode
                     Presence.shared.apply()
                     dismiss()
@@ -466,6 +494,7 @@ struct SettingsView: View {
         .padding(Socle.M.space6)
         .frame(width: 640)
         .onAppear { domain = store.data.siteDomain ?? ""; goat = store.data.goatcounter ?? "" }
+        .sheet(isPresented: $agentSettings) { AgentSettingsView() }
         .background(Socle.C.surface)
     }
 }
