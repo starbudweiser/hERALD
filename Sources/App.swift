@@ -12,7 +12,7 @@ struct HeraldApp: App {
             ZoomedRoot(zoom: zoom)
                 .splashGated()
                 .environmentObject(store)
-                .task { store.startInbox(); await store.checkIfStale() }
+                .task { store.startInbox(); store.startStats(); await store.checkIfStale() }
         }
         .defaultSize(width: 1320, height: 820)
         .commands {
@@ -88,7 +88,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
 }
 
-enum Tab: String, CaseIterable { case calendar, tracking, drafts, feedback, watch, channels }
+enum Tab: String, CaseIterable { case calendar, tracking, drafts, stats, feedback, watch, channels }
 
 struct RootView: View {
     @EnvironmentObject var store: Store
@@ -108,7 +108,7 @@ struct RootView: View {
                 TabsBar(tab: $tab)
                 Divider().overlay(Socle.C.border)
                 Group {
-                    if !store.hasCampaign && [.calendar, .tracking, .drafts, .feedback].contains(tab) {
+                    if !store.hasCampaign && [.calendar, .tracking, .drafts, .stats, .feedback].contains(tab) {
                         VStack(spacing: Socle.M.space3) {
                             EmptyState(text: L.t("campaign.empty")).frame(maxHeight: 120)
                             Button(L.t("campaign.add")) { store.addCampaign() }
@@ -119,6 +119,7 @@ struct RootView: View {
                         case .calendar: CalendarView(selectedPost: $selectedPost, tab: $tab)
                         case .tracking: TrackingView(selected: $selectedPost)
                         case .drafts: DraftsView(selected: $selectedPost)
+                        case .stats: StatsView(selectedPost: $selectedPost, tab: $tab)
                         case .feedback: FeedbackView(selected: $selectedPost)
                         case .watch: WatchView()
                         case .channels: ChannelsView()
@@ -367,6 +368,9 @@ struct SettingsView: View {
     @EnvironmentObject var store: Store
     @Environment(\.dismiss) private var dismiss
     @State private var key = Keychain.get("nexus")
+    @State private var youtubeKey = Keychain.get("youtube")
+    @State private var domain = ""
+    @State private var goat = ""
 
     var body: some View {
         VStack(alignment: .leading, spacing: Socle.M.space4) {
@@ -376,6 +380,22 @@ struct SettingsView: View {
                 Text(L.t("settings.nexuskey.note")).socle(Socle.T.meta).foregroundStyle(Socle.C.textSubtle)
                     .fixedSize(horizontal: false, vertical: true)
             }
+            Field(label: L.t("settings.youtubekey")) {
+                SecureField("", text: $youtubeKey).socleField()
+                HStack(spacing: Socle.M.space2) {
+                    Text(L.t("settings.youtubekey.note")).socle(Socle.T.meta).foregroundStyle(Socle.C.textSubtle)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 0)
+                    Button(L.t("settings.youtubekey.open")) { openURL("https://console.cloud.google.com/apis/library/youtube.googleapis.com") }
+                        .buttonStyle(SocleButtonStyle(.tertiary, height: Socle.M.sizeControl)).fixedSize()
+                }
+            }
+            HStack(alignment: .top, spacing: Socle.M.space3) {
+                Field(label: L.t("settings.site")) { TextField("monsite.com", text: $domain).socleField() }
+                Field(label: L.t("settings.goatcounter")) { TextField("code", text: $goat).socleField() }
+            }
+            Text(L.t("settings.goatcounter.note")).socle(Socle.T.meta).foregroundStyle(Socle.C.textSubtle)
+                .fixedSize(horizontal: false, vertical: true)
             Field(label: L.t("settings.data")) {
                 HStack {
                     Text(Storage.url.path).socle(Socle.T.monoSm).foregroundStyle(Socle.C.textMuted).lineLimit(1).truncationMode(.middle)
@@ -407,12 +427,19 @@ struct SettingsView: View {
                 Spacer()
                 Button(L.t("action.cancel")) { dismiss() }
                     .buttonStyle(SocleButtonStyle(.secondary)).fixedSize()
-                Button(L.t("action.save")) { Keychain.set(key.trimmingCharacters(in: .whitespacesAndNewlines), "nexus"); dismiss() }
+                Button(L.t("action.save")) {
+                    Keychain.set(key.trimmingCharacters(in: .whitespacesAndNewlines), "nexus")
+                    Keychain.set(youtubeKey.trimmingCharacters(in: .whitespacesAndNewlines), "youtube")
+                    store.data.siteDomain = SiteInput.domain(domain)
+                    store.data.goatcounter = SiteInput.goatcounter(goat)
+                    dismiss()
+                }
                     .buttonStyle(SocleButtonStyle(.primary)).fixedSize().keyboardShortcut(.defaultAction)
             }
         }
         .padding(Socle.M.space6)
         .frame(width: 640)
+        .onAppear { domain = store.data.siteDomain ?? ""; goat = store.data.goatcounter ?? "" }
         .background(Socle.C.surface)
     }
 }

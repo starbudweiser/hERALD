@@ -114,5 +114,39 @@ check(fm.fileExists(atPath: tmp.appendingPathComponent("processed/a.json").path)
 check(lines.count == 3 && Inbox.readLog(tmp).count == 3, "journal écrit")
 try? fm.removeItem(at: tmp)
 
+// Statistiques : reconnaissance des liens
+check(StatLink.youtubeID("https://www.youtube.com/watch?v=abc123&t=4") == "abc123", "YouTube watch")
+check(StatLink.youtubeID("https://youtu.be/xyz789") == "xyz789", "YouTube court")
+check(StatLink.youtubeID("youtube.com/shorts/SH0RT") == "SH0RT", "YouTube Shorts")
+check(StatLink.redditID("https://www.reddit.com/r/skyrimmods/comments/1abcde/titre/") == "1abcde", "Reddit")
+check(StatLink.bluesky("https://bsky.app/profile/moi.bsky.social/post/3kx")! == ("moi.bsky.social", "3kx"), "Bluesky")
+check(StatLink.github("https://github.com/o/r/releases/tag/v1.0")! == ("o/r", "v1.0"), "GitHub release")
+check(StatLink.github("https://github.com/o/r")!.1 == nil, "GitHub dépôt")
+check(StatPlatform.detect(link: "https://www.instagram.com/reel/x", channel: nil, site: "") == .instagram, "Instagram détecté")
+check(StatPlatform.detect(link: "https://monsite.com/fr/", channel: nil, site: "monsite.com") == .site, "page du site")
+check(StatPlatform.detect(link: "", channel: .discord, site: "") == .discord && StatPlatform.detect(link: "https://autre.com", channel: .nexus, site: "") == .other, "plateforme du canal ou lien inconnu")
+check(SiteInput.domain("https://www.MonSite.com/") == "monsite.com" && SiteInput.goatcounter("https://abc.goatcounter.com") == "abc", "réglages nettoyés")
+check(StatsFetcher.int("1,234") == 1234 && StatsFetcher.int(NSNumber(value: 7)) == 7, "nombres lus")
+
+// Statistiques : historique et cumul par période
+var h: [StatSnapshot] = []
+let t0 = Date().addingTimeInterval(-3 * 86400)
+StatHistory.append(StatSnapshot(date: t0, views: 100), to: &h)
+StatHistory.append(StatSnapshot(date: t0.addingTimeInterval(3600), views: 100), to: &h)
+StatHistory.append(StatSnapshot(date: t0.addingTimeInterval(7200), views: 100), to: &h)
+check(h.count == 2 && h[1].date == t0.addingTimeInterval(7200), "relevés identiques regroupés")
+StatHistory.append(StatSnapshot(date: Date().addingTimeInterval(-60), views: 400, likes: 10, comments: 2), to: &h)
+var camp = Campaign(); var sp = Post(); sp.title = "Vidéo"; sp.status = .published; sp.link = "https://youtu.be/a"; sp.stats = h
+var nolink = Post(); nolink.title = "Sans lien"; nolink.status = .published
+camp.posts = [sp, nolink]
+let all = StatsSummary(campaign: camp, data: AppData(), platform: { _ in .youtube }, period: .campaign)
+let day = StatsSummary(campaign: camp, data: AppData(), platform: { _ in .youtube }, period: .day)
+check(all.views == 400 && all.interactions == 12, "totaux de la campagne")
+check(day.views == 300 && day.rows[0].growth24h == 300, "évolution sur 24 h")
+check(all.missingLinks.map(\.title) == ["Sans lien"], "publications sans lien repérées")
+check(!all.curve.isEmpty && all.markdown(title: "Test").contains("| YouTube · Vidéo |"), "courbe et rapport")
+let oldPlan = #"{"format":1,"campaigns":[{"id":"\#(UUID().uuidString)","name":"A","eventDate":"2026-11-11T11:00:00Z","notes":"","milestones":[],"posts":[{"id":"\#(UUID().uuidString)","title":"P","date":"2026-11-08T11:00:00Z","status":"idea","link":"","notes":"","drafts":{},"feedback":[]}]}],"channels":[],"watch":[]}"#
+check((try? Storage.decode(Data(oldPlan.utf8)))?.campaigns[0].posts[0].stats == nil, "ancien plan relu sans statistiques")
+
 print(failures == 0 ? "OK : tous les tests passent" : "\(failures) échec(s)")
 exit(failures == 0 ? 0 : 1)

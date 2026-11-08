@@ -81,6 +81,9 @@ struct Post: Codable, Identifiable, Hashable {
     var notes = ""
     var drafts: [String: String] = [:]
     var feedback: [Feedback] = []
+    /// Relevés de statistiques (facultatifs : absents des anciens plans).
+    var stats: [StatSnapshot]?
+    var statsError: String?
 
     func draft(_ l: Lang) -> String { drafts[l.rawValue] ?? "" }
 
@@ -162,6 +165,12 @@ struct AppData: Codable {
     var selected: UUID?
     var channels: [Channel] = []
     var watch: [WatchItem] = []
+    /// Statistiques : visites du site (GoatCounter), domaine du site, code GoatCounter, dernier relevé.
+    var siteStats: [StatSnapshot]?
+    var siteDomain: String?
+    var goatcounter: String?
+    var siteError: String?
+    var statsChecked: Date?
 }
 
 enum Storage {

@@ -194,6 +194,123 @@ final class Store: ObservableObject {
         checking = false
     }
 
+    // MARK: Statistiques
+
+    @Published var statsChecking = false
+    private var statsTimer: Timer?
+
+    /// Domaine du site (pour reconnaître ses pages dans les liens) et code GoatCounter.
+    var siteDomain: String { (data.siteDomain ?? "").trimmingCharacters(in: .whitespaces).lowercased() }
+
+    func platform(_ p: Post) -> StatPlatform {
+        StatPlatform.detect(link: p.link, channel: channel(p.channelID)?.kind, site: siteDomain)
+    }
+
+    func statsSummary(_ period: StatsPeriod) -> StatsSummary {
+        StatsSummary(campaign: campaign, data: data, platform: platform, period: period)
+    }
+
+    /// Pendant une campagne (de la veille de la première publication à 7 jours après l'événement) : un relevé par
+    /// heure ; sinon un par jour. Vérifié toutes les 10 minutes, en arrière-plan, sans rien afficher.
+    func startStats() {
+        guard statsTimer == nil else { return }
+        let t = Timer(timeInterval: 600, repeats: true) { [weak self] _ in Task { @MainActor in await self?.refreshStatsIfDue() } }
+        RunLoop.main.add(t, forMode: .common)
+        statsTimer = t
+        Task { await refreshStatsIfDue() }
+    }
+
+    var campaignActive: Bool {
+        let now = Date()
+        return data.campaigns.contains { c in
+            guard let first = c.posts.map(\.date).min() else { return false }
+            return now >= first.addingTimeInterval(-86400) && now <= c.eventDate.addingTimeInterval(7 * 86400)
+        }
+    }
+
+    func refreshStatsIfDue() async {
+        let interval: TimeInterval = campaignActive ? 3600 : 86400
+        guard (data.statsChecked ?? .distantPast) < Date().addingTimeInterval(-interval + 60) else { return }
+        await refreshStats()
+    }
+
+    /// Relève les compteurs de toutes les publications qui ont un lien (toutes campagnes), puis le site.
+    func refreshStats() async {
+        guard !statsChecking else { return }
+        statsChecking = true
+        defer { statsChecking = false }
+        let keys = StatKeys(youtube: Keychain.get("youtube"), nexus: Keychain.get("nexus"),
+                            goatcounter: (data.goatcounter ?? "").trimmingCharacters(in: .whitespaces))
+        let now = Date()
+        // Liste des publications à relever (lien présent, plateforme lisible).
+        var jobs: [(Int, Int, StatPlatform, String)] = []
+        for (ci, c) in data.campaigns.enumerated() {
+            for (pi, p) in c.posts.enumerated() where !p.link.trimmingCharacters(in: .whitespaces).isEmpty {
+                let pl = platform(p)
+                if pl.automatic { jobs.append((ci, pi, pl, p.link)) }
+            }
+        }
+        // YouTube : un seul appel pour toutes les vidéos (quota).
+        let yt = jobs.filter { $0.2 == .youtube }
+        var ytResults: [String: StatSnapshot] = [:]
+        var ytError: String?
+        let ids = Array(Set(yt.compactMap { StatLink.youtubeID($0.3) }))
+        for chunk in stride(from: 0, to: ids.count, by: 50).map({ Array(ids[$0..<min($0 + 50, ids.count)]) }) {
+            switch await StatsFetcher.youtube(chunk, key: keys.youtube) {
+            case .success(let r): ytResults.merge(r) { $1 }
+            case .failure(let e): ytError = e.message
+            }
+        }
+        for (ci, pi, pl, link) in jobs {
+            var result: Result<StatSnapshot, WatchError>
+            if pl == .youtube {
+                if let id = StatLink.youtubeID(link), let s = ytResults[id] { result = .success(s) }
+                else { result = .failure(WatchError(message: ytError ?? L.t(StatLink.youtubeID(link) == nil ? "stats.err.link" : "stats.err.notfound"))) }
+            } else {
+                result = await StatsFetcher.fetch(link, platform: pl, keys: keys)
+            }
+            guard ci < data.campaigns.count, pi < data.campaigns[ci].posts.count else { continue }
+            var p = data.campaigns[ci].posts[pi]
+            switch result {
+            case .success(var snap):
+                snap.date = now
+                var h = p.stats ?? []
+                StatHistory.append(snap, to: &h)
+                p.stats = h; p.statsError = nil
+            case .failure(let e): p.statsError = e.message
+            }
+            data.campaigns[ci].posts[pi] = p
+        }
+        // Visites du site entier.
+        if !keys.goatcounter.isEmpty {
+            switch await StatsFetcher.site(keys.goatcounter, path: "TOTAL") {
+            case .success(var snap):
+                snap.date = now
+                var h = data.siteStats ?? []
+                StatHistory.append(snap, to: &h)
+                data.siteStats = h; data.siteError = nil
+            case .failure(let e): data.siteError = e.message
+            }
+        }
+        data.statsChecked = now
+    }
+
+    /// Saisie manuelle (Instagram, Facebook, Discord, X… ou correction).
+    func addManualStats(_ postID: UUID, _ snap: StatSnapshot) {
+        guard var p = post(postID) else { return }
+        var s = snap; s.manual = true
+        var h = p.stats ?? []
+        StatHistory.append(s, to: &h)
+        p.stats = h
+        update(p)
+    }
+
+    func removeStat(_ postID: UUID, at date: Date) {
+        guard var p = post(postID) else { return }
+        p.stats?.removeAll { $0.date == date }
+        update(p)
+    }
+
     func addWatch(_ input: String, name: String) -> String? {
         guard let (kind, ref) = WatchItem.parse(input) else { return L.t("watch.invalid") }
         guard !data.watch.contains(where: { $0.kind == kind && $0.ref.lowercased() == ref.lowercased() }) else {
