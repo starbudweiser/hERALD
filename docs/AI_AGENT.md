@@ -8,9 +8,10 @@ Turn it on in **Settings → AI agent (optional)**, then **Set up the agent…**
 
 | | |
 |---|---|
-| **A chat per task and per campaign** | "AI agent" button in the header (campaign) and "Chat with the agent" in each task. |
+| **A side panel, always at hand** | "AI agent" button in the header, or "Chat with the agent" in a task. The panel stays open while you work on the plan; switch between the campaign and the selected task. Resizable with the mouse, the window widens if needed. |
+| **Live progress** | "Reading: file…", "Searching…", elapsed time and a **Stop** button; the chat scrolls to the latest answer by itself; Return sends, ⇧Return adds a line break. |
 | **Task awareness** | Each request carries the task sheet: id, title, date, channel, status, link, notes, drafts in four languages, latest statistics. The plan and the campaign notes are added when they changed. |
-| **Proposals you apply in one click** | The agent can propose changes to notes, drafts (fr, en, es, it), status, and an addition to the campaign notes. You see a preview card, then **Apply** or **Dismiss**. **Undo** puts everything back. |
+| **Proposals you apply in one click** | The agent can propose changes to notes, drafts (fr, en, es, it), status, and an addition to the campaign notes. Each field shows its value **before** and **after** with a checkbox: apply everything, or only your selection. **Undo** puts everything back. |
 | **Hard limits** | The agent never publishes, never marks a post "Published" (any such proposal is ignored) and cannot change any other field. |
 | **Campaign instructions** | *Edit the campaign → Instructions for the agent*: tone, audience, constraints. Sent with every request. |
 | **Quick actions** | Buttons above the input (write the draft, improve the hook, translate, check before publishing, what next?). Edit them in the agent settings: one per line, `Title | instruction`. |
@@ -27,7 +28,7 @@ Turn it on in **Settings → AI agent (optional)**, then **Set up the agent…**
 
 ### First use on a Mac: removable volumes
 
-If the working folder is on an external disk, macOS asks once: *"hERALD would like to access files on a removable volume"*. Click **Allow**. Until you do, the request waits.
+If the working folder is on an external disk, macOS asks once: *"hERALD would like to access files on a removable volume"*. Click **Allow**. The **Test the agent** button in the settings checks the program and the folder access without asking the agent anything, and is the right moment to answer macOS. If access is refused, hERALD explains it and says where to allow it (System Settings, Privacy & Security, Files & Folders, hERALD, Removable Volumes).
 
 ## Other agents
 

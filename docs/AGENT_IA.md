@@ -8,9 +8,10 @@ Activez-le dans **Réglages → Agent IA (facultatif)**, puis **Configurer l'age
 
 | | |
 |---|---|
-| **Une discussion par tâche et par campagne** | Bouton « Agent IA » dans l'en-tête (campagne) et « Discuter avec l'agent » dans chaque tâche. |
+| **Un volet à droite, toujours à portée** | Bouton « Agent IA » dans l'en-tête, ou « Discuter avec l'agent » dans une tâche. Le volet reste ouvert pendant que vous travaillez sur le plan ; basculez entre la campagne et la tâche sélectionnée. Redimensionnable à la souris, la fenêtre s'élargit si besoin. |
+| **Un suivi en direct** | « Lit : fichier… », « Cherche… », durée écoulée, bouton **Arrêter** ; la discussion défile seule jusqu'à la dernière réponse ; Entrée envoie, ⇧Entrée fait un retour à la ligne. |
 | **L'agent connaît la tâche** | Chaque demande porte la fiche de la tâche : identifiant, titre, date, canal, statut, lien, notes, brouillons en quatre langues, dernières statistiques. Le plan et les notes de campagne s'ajoutent quand ils ont changé. |
-| **Des propositions appliquées d'un clic** | L'agent peut proposer des modifications des notes, des brouillons (fr, en, es, it), du statut, et un ajout aux notes de campagne. Vous voyez une carte d'aperçu, puis **Appliquer** ou **Ignorer**. **Annuler** remet tout en place. |
+| **Des propositions appliquées d'un clic** | L'agent peut proposer des modifications des notes, des brouillons (fr, en, es, it), du statut, et un ajout aux notes de campagne. Chaque champ s'affiche avec sa valeur **avant** et **après** et une case à cocher : vous appliquez tout, ou seulement la sélection. **Annuler** remet tout en place. |
 | **Limites strictes** | L'agent ne publie jamais, ne marque jamais une publication « Publié » (toute proposition en ce sens est ignorée) et ne peut modifier aucun autre champ. |
 | **Consignes de campagne** | *Modifier la campagne → Consignes pour l'agent* : ton, public, contraintes. Envoyées à chaque demande. |
 | **Actions rapides** | Boutons au-dessus de la saisie (rédiger, améliorer l'accroche, traduire, vérifier avant publication, et ensuite ?). Modifiables dans les réglages de l'agent : une par ligne, `Titre | consigne`. |
@@ -27,7 +28,7 @@ Activez-le dans **Réglages → Agent IA (facultatif)**, puis **Configurer l'age
 
 ### Première utilisation sur un Mac : volumes amovibles
 
-Si le dossier de travail est sur un disque externe, macOS demande une fois : *« hERALD souhaite accéder aux fichiers d'un volume amovible »*. Cliquez sur **Autoriser**. Tant que vous ne l'avez pas fait, la demande attend.
+Si le dossier de travail est sur un disque externe, macOS demande une fois : *« hERALD souhaite accéder aux fichiers d'un volume amovible »*. Cliquez sur **Autoriser**. Le bouton **Tester l'agent** des réglages vérifie le programme et l'accès au dossier sans rien demander à l'agent, et c'est le bon moment pour répondre à macOS. Si l'accès est refusé, hERALD l'explique et indique où l'autoriser (Réglages Système, Confidentialité et sécurité, Fichiers et dossiers, hERALD, Volumes amovibles).
 
 ## Autres agents
 

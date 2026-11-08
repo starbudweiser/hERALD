@@ -252,7 +252,6 @@ struct PostEditor: View {
     let id: UUID
     @Binding var selected: UUID?
     @State private var removing = false
-    @State private var agentChat = false
     @AppStorage(AgentConfig.key) private var agentRaw = Data()
 
     private var post: Binding<Post> {
@@ -301,7 +300,7 @@ struct PostEditor: View {
                     TextEditor(text: post.notes).socle(Socle.T.body).socleField(multiline: true).frame(height: 90)
                 }
                 if AgentConfig.isEnabled(agentRaw) {
-                    Button(L.t("agent.chat")) { agentChat = true }
+                    Button(L.t("agent.chat")) { store.agentScopeTask = true; store.agentOpen = true }
                         .buttonStyle(SocleButtonStyle(.secondary, height: Socle.M.sizeControl)).fixedSize()
                 }
                 HStack(spacing: Socle.M.space2) {
@@ -314,7 +313,6 @@ struct PostEditor: View {
             }
             .padding(Socle.M.space4)
         }
-        .sheet(isPresented: $agentChat) { AgentView(target: .post(id)).environmentObject(store) }
         .confirmationDialog(L.t("post.remove.confirm", post.wrappedValue.title), isPresented: $removing) {
             Button(L.t("post.remove"), role: .destructive) { store.removePost(id); selected = nil }
         }

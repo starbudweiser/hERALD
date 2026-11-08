@@ -200,6 +200,13 @@ final class Store: ObservableObject {
     /// Dialogue avec l'agent IA : demandes en cours et dernière erreur par discussion.
     @Published var agentBusy: Set<AgentTarget> = []
     @Published var agentError: [AgentTarget: String] = [:]
+    /// Avancement en direct (ce que l'agent est en train de faire) et heure de départ de la demande.
+    @Published var agentStatus: [AgentTarget: String] = [:]
+    @Published var agentStart: [AgentTarget: Date] = [:]
+    /// Volet de discussion ouvert, et s'il parle de la tâche sélectionnée (sinon de la campagne).
+    @Published var agentOpen = false
+    @Published var agentScopeTask = false
+    var agentTasks: [AgentTarget: Task<Void, Never>] = [:]
     private var statsTimer: Timer?
 
     /// Domaine du site (pour reconnaître ses pages dans les liens) et code GoatCounter.

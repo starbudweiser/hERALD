@@ -138,6 +138,32 @@ struct AgentProposal: Hashable {
     var campaignNotesAppend: String?
 }
 
+/// Un champ proposé, avec sa valeur actuelle : l'utilisateur voit l'avant et l'après et coche ce qu'il applique.
+struct AgentItem: Identifiable, Hashable {
+    let id: String          // « 0.notes », « 0.status », « 0.draft.fr », « campaign »
+    let post: String?       // titre de la publication (nil pour la campagne)
+    let label: String
+    let old: String
+    let new: String
+}
+
+extension AgentProposal {
+    func items(in c: Campaign, current: UUID?) -> [AgentItem] {
+        var out: [AgentItem] = []
+        for (n, ch) in changes.enumerated() {
+            guard let i = AgentParse.find(ch.post, in: c, current: current) else { continue }
+            let p = c.posts[i]
+            if let v = ch.notes { out.append(AgentItem(id: "\(n).notes", post: p.title, label: L.t("col.notes"), old: p.notes, new: v)) }
+            if let s = ch.status, s != .published { out.append(AgentItem(id: "\(n).status", post: p.title, label: L.t("col.status"), old: p.status.label, new: s.label)) }
+            for (k, v) in ch.drafts.sorted(by: { $0.key < $1.key }) {
+                out.append(AgentItem(id: "\(n).draft.\(k)", post: p.title, label: "\(L.t("tab.drafts")) \(k.uppercased())", old: p.drafts[k] ?? "", new: v))
+            }
+        }
+        if let add = campaignNotesAppend { out.append(AgentItem(id: "campaign", post: nil, label: L.t("agent.campaignnotes.add"), old: "", new: add)) }
+        return out
+    }
+}
+
 enum AgentParse {
     /// Sépare le texte de la réponse du bloc ```herald-proposal … ``` qui peut la terminer.
     static func split(_ reply: String) -> (text: String, proposal: AgentProposal?) {
@@ -188,27 +214,29 @@ enum AgentParse {
     }
 
     /// Applique une proposition (jamais « Publié », jamais d'autre champ que notes, brouillons, statut) ; renvoie de quoi l'annuler.
-    static func apply(_ p: AgentProposal, to c: inout Campaign, current: UUID?) -> (lines: [String], undo: [AgentUndo]) {
+    /// `only` : identifiants des éléments cochés (voir `AgentProposal.items`) ; nil = tout.
+    static func apply(_ p: AgentProposal, to c: inout Campaign, current: UUID?, only: Set<String>? = nil) -> (lines: [String], undo: [AgentUndo]) {
         var lines: [String] = [], undo: [AgentUndo] = []
-        for ch in p.changes {
+        func want(_ k: String) -> Bool { only?.contains(k) ?? true }
+        for (n, ch) in p.changes.enumerated() {
             guard let i = find(ch.post, in: c, current: current) else { lines.append(L.t("agent.apply.notfound", ch.post ?? "—")); continue }
             let id = c.posts[i].id, title = c.posts[i].title
-            if let n = ch.notes {
-                undo.append(AgentUndo(postID: id, field: "notes", old: c.posts[i].notes)); c.posts[i].notes = n
+            if let v = ch.notes, want("\(n).notes") {
+                undo.append(AgentUndo(postID: id, field: "notes", old: c.posts[i].notes)); c.posts[i].notes = v
                 lines.append("\(title) · \(L.t("col.notes"))")
             }
-            if let s = ch.status, s != .published {
+            if let s = ch.status, s != .published, want("\(n).status") {
                 undo.append(AgentUndo(postID: id, field: "status", old: c.posts[i].status.rawValue)); c.posts[i].status = s
                 lines.append("\(title) · \(L.t("col.status")) : \(s.label)")
             } else if ch.status == .published {
                 lines.append(L.t("agent.apply.nopublished", title))
             }
-            for (k, v) in ch.drafts.sorted(by: { $0.key < $1.key }) {
+            for (k, v) in ch.drafts.sorted(by: { $0.key < $1.key }) where want("\(n).draft.\(k)") {
                 undo.append(AgentUndo(postID: id, field: "draft.\(k)", old: c.posts[i].drafts[k])); c.posts[i].drafts[k] = v
                 lines.append("\(title) · \(L.t("tab.drafts")) \(k.uppercased())")
             }
         }
-        if let add = p.campaignNotesAppend {
+        if let add = p.campaignNotesAppend, want("campaign") {
             undo.append(AgentUndo(postID: nil, field: "campaign.notes", old: c.notes))
             c.notes = c.notes.isEmpty ? add : c.notes + "\n\n" + add
             lines.append(L.t("campaign.notes"))

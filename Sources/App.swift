@@ -53,6 +53,8 @@ struct ZoomedRoot: View {
     let zoom: Double
     @Environment(\.openWindow) private var openWindow
     @EnvironmentObject private var store: Store
+    @AppStorage("agentPanelWidth") private var panelWidth = 440.0
+    @AppStorage(AgentConfig.key) private var agentRaw = Data()
     var body: some View {
         GeometryReader { g in
             RootView()
@@ -63,7 +65,8 @@ struct ZoomedRoot: View {
             Presence.shared.openMain = { openWindow(id: "main") }
             Presence.shared.refreshStats = { Task { await store.refreshStats() } }
         }
-        .frame(minWidth: 1120 * zoom, minHeight: 680 * zoom)
+        // volet de l'agent ouvert : la fenêtre s'élargit d'autant plutôt que de rogner le contenu
+        .frame(minWidth: (store.agentOpen && AgentConfig.isEnabled(agentRaw) ? 1090 + panelWidth + 7 : 1120) * zoom, minHeight: 680 * zoom)
         .background(Socle.C.bg)
     }
 }
@@ -114,11 +117,15 @@ struct RootView: View {
     @State private var editingCampaign = false
     @State private var settings = false
     @State private var selectedPost: UUID?
+    @AppStorage(AgentConfig.key) private var agentRaw = Data()
 
     var body: some View {
         HStack(spacing: 0) {
-            CampaignSidebar(editing: $editingCampaign)
-            Divider().overlay(Socle.C.border)
+            // volet de l'agent ouvert : la liste des campagnes s'efface (le nom reste dans l'en-tête) pour laisser la place
+            if !(store.agentOpen && AgentConfig.isEnabled(agentRaw)) {
+                CampaignSidebar(editing: $editingCampaign)
+                Divider().overlay(Socle.C.border)
+            }
             VStack(spacing: 0) {
                 HeaderBar(editing: $editingCampaign, settings: $settings)
                 Divider().overlay(Socle.C.border)
@@ -145,6 +152,10 @@ struct RootView: View {
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+            if store.agentOpen && AgentConfig.isEnabled(agentRaw) {
+                Divider().overlay(Socle.C.border)
+                AgentPanel(selectedPost: $selectedPost)
             }
         }
         .background(Socle.C.bg)
@@ -264,7 +275,6 @@ struct HeaderBar: View {
     @Binding var editing: Bool
     @Binding var settings: Bool
     @State private var problem: String?
-    @State private var agentChat = false
     @AppStorage(AgentConfig.key) private var agentRaw = Data()
 
     var body: some View {
@@ -290,9 +300,12 @@ struct HeaderBar: View {
             } label: { Text(L.t("menu.plan")) }
                 .menuStyle(.borderlessButton).fixedSize()
             if AgentConfig.isEnabled(agentRaw) {
-                Button(L.t("agent.button")) { agentChat = true }
-                    .buttonStyle(SocleButtonStyle(.secondary, height: Socle.M.sizeControl)).fixedSize()
-                    .disabled(!store.hasCampaign)
+                Button(L.t("agent.button")) {
+                    store.agentOpen.toggle()
+                    if store.agentOpen { store.agentScopeTask = false }
+                }
+                .buttonStyle(SocleButtonStyle(store.agentOpen ? .primary : .secondary, height: Socle.M.sizeControl)).fixedSize()
+                .disabled(!store.hasCampaign)
             }
             Button(L.t("campaign.edit")) { editing = true }
                 .buttonStyle(SocleButtonStyle(.secondary, height: Socle.M.sizeControl)).fixedSize()
@@ -304,7 +317,6 @@ struct HeaderBar: View {
         .padding(.horizontal, Socle.M.space3)
         .frame(minHeight: Socle.M.sizeBar + 8)
         .background(Socle.C.surfaceRaised)
-        .sheet(isPresented: $agentChat) { AgentView(target: .campaign).environmentObject(store) }
     }
 }
 

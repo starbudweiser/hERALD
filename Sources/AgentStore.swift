@@ -27,14 +27,23 @@ extension Store {
         }
     }
 
+    /// Lance une demande en arrière-plan (interruptible avec `cancelAgent`).
+    func startAgent(_ t: AgentTarget, _ question: String) {
+        guard !agentBusy.contains(t) else { return }
+        agentTasks[t] = Task { await self.askAgent(t, question); self.agentTasks[t] = nil }
+    }
+
+    func cancelAgent(_ t: AgentTarget) { agentTasks[t]?.cancel() }
+
     /// Envoie une demande. Toutes les demandes partent dans la même session de l'agent ; le contexte (campagne, tâche)
     /// accompagne le message quand il est nouveau ou modifié, pour que l'agent retrouve la tâche concernée.
     func askAgent(_ t: AgentTarget, _ question: String) async {
         let q = question.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !q.isEmpty, !agentBusy.contains(t), let ci = data.campaigns.firstIndex(where: { $0.id == campaign.id }) else { return }
         let cfg = AgentConfig.current
-        agentBusy.insert(t); agentError[t] = nil
-        defer { agentBusy.remove(t) }
+        agentBusy.insert(t); agentError[t] = nil; agentStart[t] = Date(); agentStatus[t] = L.t("agent.status.think")
+        defer { agentBusy.remove(t); agentStatus[t] = nil; agentStart[t] = nil }
+        let progress: @Sendable (String) -> Void = { [weak self] s in Task { @MainActor in self?.agentStatus[t] = s } }
         let before = agentThread(t)
         mutateThread(t, ci) { $0.messages.append(AgentMessage(role: .user, text: q)) }
 
@@ -55,7 +64,8 @@ extension Store {
                 if camp.agent?.contextHash != campHash { parts.append(campBlock) }
                 if let postHash, before.contextHash != postHash { parts.append(postBlock) }
                 let r = try await AgentRunner.claude(cfg, session: cfg.sessionID, system: system,
-                                                     prompt: AgentContext.message(question: q, context: parts.isEmpty ? nil : parts.joined(separator: "\n")))
+                                                     prompt: AgentContext.message(question: q, context: parts.isEmpty ? nil : parts.joined(separator: "\n")),
+                                                     progress: progress)
                 reply = r.text
                 if cfg.sessionID != r.session { var c = AgentConfig.current; c.sessionID = r.session; AgentConfig.current = c }
             case .command:
@@ -75,9 +85,9 @@ extension Store {
             var c = data.campaigns[ci].agent ?? AgentThread(); c.contextHash = campHash; data.campaigns[ci].agent = c
             for s in parsed.items { attachSubSession(s, ci: ci, current: t) }
         } catch let e as AgentFailure {
-            agentError[t] = e.message
+            agentError[t] = Task.isCancelled ? L.t("agent.cancelled") : e.message
         } catch {
-            agentError[t] = error.localizedDescription
+            agentError[t] = Task.isCancelled ? L.t("agent.cancelled") : error.localizedDescription
         }
     }
 
@@ -94,12 +104,12 @@ extension Store {
 
     private func messageIndex(_ t: AgentTarget, _ id: UUID) -> Int? { agentThread(t).messages.firstIndex { $0.id == id } }
 
-    func applyProposal(_ t: AgentTarget, message id: UUID) {
+    func applyProposal(_ t: AgentTarget, message id: UUID, only: Set<String>? = nil) {
         guard let ci = data.campaigns.firstIndex(where: { $0.id == campaign.id }), let mi = messageIndex(t, id),
               let proposal = AgentParse.split(agentThread(t).messages[mi].text).proposal else { return }
         var c = data.campaigns[ci]
         var current: UUID?; if case .post(let p) = t { current = p }
-        let r = AgentParse.apply(proposal, to: &c, current: current)
+        let r = AgentParse.apply(proposal, to: &c, current: current, only: only)
         // la discussion vit dans la campagne : on ne la remplace pas par la copie modifiée
         let thread = data.campaigns[ci].agent
         c.agent = thread

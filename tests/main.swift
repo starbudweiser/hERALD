@@ -201,5 +201,21 @@ threaded.brief = nil; threaded.agentBrief = "Ton sobre"
 let rt = try! Storage.decode(try! Storage.encode(AppData(campaigns: [threaded])))
 check(rt.campaigns[0].agent?.subSessions.first?.id == sid && rt.campaigns[0].agentBrief == "Ton sobre", "fils et consignes enregistrés")
 
+// Agent IA : avant/après, application champ par champ, avancement en direct
+let items = split.proposal!.items(in: ac, current: nil)
+check(items.contains { $0.id == "0.notes" && $0.old == "anciennes notes" && $0.new == "nouvelles notes" }, "avant/après des notes")
+check(items.contains { $0.id == "0.draft.fr" && $0.old == "ancien brouillon" } && items.contains { $0.id == "0.draft.en" && $0.old.isEmpty }, "avant/après des brouillons")
+check(items.contains { $0.id == "campaign" } && !items.contains { $0.id.hasPrefix("1.") }, "ajout aux notes de campagne ; « Publié » absent de la liste")
+var partialC = ac
+let pr = AgentParse.apply(split.proposal!, to: &partialC, current: nil, only: ["0.draft.en"])
+check(partialC.posts[0].drafts["en"] == "new EN" && partialC.posts[0].notes == "anciennes notes" && partialC.posts[0].drafts["fr"] == "ancien brouillon"
+      && partialC.notes == "Notes de départ" && pr.undo.count == 1, "seuls les champs cochés sont appliqués")
+AgentParse.revert(pr.undo, in: &partialC)
+check(partialC.posts[0].drafts["en"] == nil, "annulation d'une application partielle")
+let toolLine = #"{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Read","input":{"file_path":"/a/b/plan.md"}}]}}"#
+check(AgentRunner.status(fromStreamLine: toolLine)?.contains("plan.md") == true, "avancement : fichier lu")
+check(AgentRunner.status(fromStreamLine: #"{"type":"assistant","message":{"content":[{"type":"text","text":"Bonjour"}]}}"#) != nil, "avancement : rédaction")
+check(AgentRunner.status(fromStreamLine: #"{"type":"result","result":"ok"}"#) == nil && AgentRunner.status(fromStreamLine: "pas du json") == nil, "lignes sans avancement ignorées")
+
 print(failures == 0 ? "OK : tous les tests passent" : "\(failures) échec(s)")
 exit(failures == 0 ? 0 : 1)

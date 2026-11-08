@@ -23,8 +23,6 @@ enum AgentRunner {
         return nil
     }
 
-    private final class Box { var out = Data(); var err = Data() }
-
     /// Avant de lancer l'agent, hERALD lit lui-même son dossier de travail : sur un disque externe, c'est lui (et non
     /// l'agent) qui déclenche la demande d'autorisation de macOS « volumes amovibles », et un refus devient un message clair.
     static func checkWorkFolder(_ cfg: AgentConfig) async throws {
@@ -39,44 +37,127 @@ enum AgentRunner {
         if !ok { throw AgentFailure(message: L.t("agent.err.volume", url.path)) }
     }
 
+    private final class Box: @unchecked Sendable { var out = Data(); var err = Data() }
+
+    /// Permet d'arrêter le processus quand la tâche qui l'attend est annulée.
+    private final class Handle: @unchecked Sendable {
+        private let lock = NSLock()
+        private var process: Process?
+        private var cancelled = false
+        func set(_ p: Process) { lock.lock(); process = p; let c = cancelled; lock.unlock(); if c { p.terminate() } }
+        func cancel() { lock.lock(); cancelled = true; let p = process; lock.unlock(); if p?.isRunning == true { p?.terminate() } }
+    }
+
     /// Lance un processus, lui donne `stdin`, attend sa fin (ou `timeout` secondes) sans bloquer l'interface.
-    static func run(_ exe: URL, _ args: [String], stdin: String, cwd: URL, timeout: TimeInterval = 600) async throws -> Output {
-        try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Output, Error>) in
-            DispatchQueue.global(qos: .userInitiated).async {
-                let p = Process()
-                p.executableURL = exe; p.arguments = args; p.environment = environment; p.currentDirectoryURL = cwd
-                let i = Pipe(), o = Pipe(), e = Pipe()
-                p.standardInput = i; p.standardOutput = o; p.standardError = e
-                do { try p.run() } catch { cont.resume(throwing: AgentFailure(message: error.localizedDescription)); return }
-                let box = Box(), group = DispatchGroup()
-                group.enter(); DispatchQueue.global().async { box.out = o.fileHandleForReading.readDataToEndOfFile(); group.leave() }
-                group.enter(); DispatchQueue.global().async { box.err = e.fileHandleForReading.readDataToEndOfFile(); group.leave() }
-                i.fileHandleForWriting.write(Data(stdin.utf8)); try? i.fileHandleForWriting.close()
-                let kill = DispatchWorkItem { if p.isRunning { p.terminate() } }
-                DispatchQueue.global().asyncAfter(deadline: .now() + timeout, execute: kill)
-                p.waitUntilExit(); group.wait(); kill.cancel()
-                cont.resume(returning: Output(out: String(decoding: box.out, as: UTF8.self), err: String(decoding: box.err, as: UTF8.self), code: p.terminationStatus))
+    /// `onLine` reçoit chaque ligne de sortie au fur et à mesure ; l'annulation de la tâche arrête le processus.
+    static func run(_ exe: URL, _ args: [String], stdin: String, cwd: URL, timeout: TimeInterval = 900,
+                    onLine: (@Sendable (String) -> Void)? = nil) async throws -> Output {
+        let handle = Handle()
+        return try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Output, Error>) in
+                DispatchQueue.global(qos: .userInitiated).async {
+                    let p = Process()
+                    p.executableURL = exe; p.arguments = args; p.environment = environment; p.currentDirectoryURL = cwd
+                    let i = Pipe(), o = Pipe(), e = Pipe()
+                    p.standardInput = i; p.standardOutput = o; p.standardError = e
+                    do { try p.run() } catch { cont.resume(throwing: AgentFailure(message: error.localizedDescription)); return }
+                    handle.set(p)
+                    let box = Box(), group = DispatchGroup()
+                    group.enter()
+                    DispatchQueue.global().async {
+                        var pending = Data()
+                        while true {
+                            let d = o.fileHandleForReading.availableData
+                            if d.isEmpty { break }
+                            box.out.append(d); pending.append(d)
+                            while let nl = pending.firstIndex(of: 10) {
+                                let line = String(decoding: pending[pending.startIndex..<nl], as: UTF8.self)
+                                pending.removeSubrange(pending.startIndex...nl)
+                                onLine?(line)
+                            }
+                        }
+                        if !pending.isEmpty { onLine?(String(decoding: pending, as: UTF8.self)) }
+                        group.leave()
+                    }
+                    group.enter(); DispatchQueue.global().async { box.err = e.fileHandleForReading.readDataToEndOfFile(); group.leave() }
+                    i.fileHandleForWriting.write(Data(stdin.utf8)); try? i.fileHandleForWriting.close()
+                    let kill = DispatchWorkItem { if p.isRunning { p.terminate() } }
+                    DispatchQueue.global().asyncAfter(deadline: .now() + timeout, execute: kill)
+                    p.waitUntilExit(); group.wait(); kill.cancel()
+                    cont.resume(returning: Output(out: String(decoding: box.out, as: UTF8.self), err: String(decoding: box.err, as: UTF8.self), code: p.terminationStatus))
+                }
             }
+        } onCancel: { handle.cancel() }
+    }
+
+    /// Phrase d'avancement tirée d'un événement du flux de Claude Code (outil utilisé, rédaction…).
+    static func status(fromStreamLine line: String) -> String? {
+        guard let o = (try? JSONSerialization.jsonObject(with: Data(line.utf8))) as? [String: Any], o["type"] as? String == "assistant",
+              let content = (o["message"] as? [String: Any])?["content"] as? [[String: Any]] else { return nil }
+        for c in content.reversed() {
+            if c["type"] as? String == "tool_use" {
+                let input = c["input"] as? [String: Any] ?? [:]
+                switch c["name"] as? String ?? "" {
+                case "Read": return L.t("agent.status.read", ((input["file_path"] as? String) ?? "").split(separator: "/").last.map(String.init) ?? "…")
+                case "Grep", "Glob": return L.t("agent.status.search", (input["pattern"] as? String) ?? "…")
+                case "Bash": return L.t("agent.status.run")
+                default: return L.t("agent.status.think")
+                }
+            }
+            if c["type"] as? String == "text" { return L.t("agent.status.write") }
         }
+        return nil
+    }
+
+    /// Vérifie l'agent sans rien lui demander : programme trouvé, dossier de travail accessible (c'est ici que macOS
+    /// pose sa question d'autorisation pour un disque externe, au moment choisi par l'utilisateur).
+    static func test(_ cfg: AgentConfig) async -> Result<String, AgentFailure> {
+        do {
+            var info = ""
+            switch cfg.kind {
+            case .claude:
+                guard let exe = claudeURL(cfg) else { return .failure(AgentFailure(message: L.t("agent.err.noclaude"))) }
+                let r = try await run(exe, ["--version"], stdin: "", cwd: URL(fileURLWithPath: NSHomeDirectory()), timeout: 30)
+                info = r.out.trimmingCharacters(in: .whitespacesAndNewlines)
+            case .command:
+                guard !cfg.command.trimmingCharacters(in: .whitespaces).isEmpty else { return .failure(AgentFailure(message: L.t("agent.err.nocommand"))) }
+                let first = cfg.command.split(separator: " ").first.map(String.init) ?? ""
+                let r = try await run(URL(fileURLWithPath: "/bin/zsh"), ["-lc", "command -v \(first)"], stdin: "", cwd: URL(fileURLWithPath: NSHomeDirectory()), timeout: 30)
+                guard r.code == 0 else { return .failure(AgentFailure(message: L.t("agent.err.nocommandfound", first))) }
+                info = first
+            case .openai:
+                guard !cfg.model.isEmpty, URL(string: cfg.apiURL) != nil else { return .failure(AgentFailure(message: L.t("agent.err.noapi"))) }
+                info = cfg.model
+            }
+            if cfg.kind != .openai { try await checkWorkFolder(cfg) }
+            return .success(L.t("agent.test.ok", info))
+        } catch let e as AgentFailure { return .failure(e) }
+        catch { return .failure(AgentFailure(message: error.localizedDescription)) }
     }
 
     // MARK: Claude Code
 
     /// Envoie un message dans la session « hERALD » (la crée si besoin). Renvoie la réponse et l'identifiant de la session.
-    static func claude(_ cfg: AgentConfig, session: String, system: String, prompt: String) async throws -> (text: String, session: String) {
+    static func claude(_ cfg: AgentConfig, session: String, system: String, prompt: String,
+                       progress: (@Sendable (String) -> Void)? = nil) async throws -> (text: String, session: String) {
         guard let exe = claudeURL(cfg) else { throw AgentFailure(message: L.t("agent.err.noclaude")) }
         try await checkWorkFolder(cfg)
         let id = session.isEmpty ? UUID().uuidString.lowercased() : session
         // lecture seule + la seule commande `claude` (pour ouvrir des sous-sessions) ; tout le reste est refusé sans question
-        var args = ["-p", "--output-format", "json", "--permission-mode", "dontAsk",
+        var args = ["-p", "--output-format", "stream-json", "--verbose", "--permission-mode", "dontAsk",
                     "--tools", "Read,Glob,Grep,Bash", "--allowedTools", "Read,Glob,Grep,Bash(claude *)"]
         if cfg.lightMode { args.append("--safe-mode") }
         args += session.isEmpty ? ["--session-id", id, "--name", cfg.sessionName.isEmpty ? "hERALD" : cfg.sessionName] : ["--resume", id]
         if !cfg.model.isEmpty { args += ["--model", cfg.model] }
         args += ["--append-system-prompt", system]
-        let r = try await run(exe, args, stdin: prompt, cwd: cfg.workURL)
-        guard let obj = (try? JSONSerialization.jsonObject(with: Data(r.out.utf8))) as? [String: Any] else {
-            throw AgentFailure(message: shorten(r.err.isEmpty ? r.out : r.err) )
+        let r = try await run(exe, args, stdin: prompt, cwd: cfg.workURL, onLine: { line in
+            if let progress, let st = status(fromStreamLine: line) { progress(st) }
+        })
+        try Task.checkCancellation()
+        // la réponse est l'événement « result » (dernier du flux)
+        let resultLine = r.out.split(whereSeparator: \.isNewline).last { $0.contains("\"type\":\"result\"") }
+        guard let resultLine, let obj = (try? JSONSerialization.jsonObject(with: Data(resultLine.utf8))) as? [String: Any] else {
+            throw AgentFailure(message: shorten(r.err.isEmpty ? r.out : r.err))
         }
         if (obj["is_error"] as? Bool) == true || r.code != 0 {
             throw AgentFailure(message: shorten((obj["result"] as? String) ?? r.err))
