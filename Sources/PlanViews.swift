@@ -110,9 +110,9 @@ struct DayCell: View {
         // jour courant : fond teinté et liseré de la couleur d'accent (les deux fonds dans un seul calque)
         .background(ZStack {
             Rectangle().fill(inMonth ? Socle.C.surface : Socle.C.bgSunken)
-            if cal.isDateInToday(day) { Rectangle().fill(Socle.C.accent.opacity(0.28)) }
+            if cal.isDateInToday(day) { Rectangle().fill(Socle.C.accent.opacity(0.14)) }
         })
-        .overlay(Rectangle().stroke(Socle.C.accent.opacity(cal.isDateInToday(day) ? 0.7 : 0), lineWidth: 1.5))
+        .overlay(Rectangle().stroke(Socle.C.accent.opacity(cal.isDateInToday(day) ? 0.45 : 0), lineWidth: 1.5))
         .contentShape(Rectangle())
         .contextMenu {
             Button(L.t("post.add.day")) { open(store.addPost(on: day)) }
