@@ -25,6 +25,20 @@ enum AgentRunner {
 
     private final class Box { var out = Data(); var err = Data() }
 
+    /// Avant de lancer l'agent, hERALD lit lui-même son dossier de travail : sur un disque externe, c'est lui (et non
+    /// l'agent) qui déclenche la demande d'autorisation de macOS « volumes amovibles », et un refus devient un message clair.
+    static func checkWorkFolder(_ cfg: AgentConfig) async throws {
+        let url = cfg.workURL
+        var isDir: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir), isDir.boolValue else {
+            throw AgentFailure(message: L.t("agent.err.nofolder", url.path))
+        }
+        let ok: Bool = await withCheckedContinuation { c in
+            DispatchQueue.global().async { c.resume(returning: (try? FileManager.default.contentsOfDirectory(atPath: url.path)) != nil) }
+        }
+        if !ok { throw AgentFailure(message: L.t("agent.err.volume", url.path)) }
+    }
+
     /// Lance un processus, lui donne `stdin`, attend sa fin (ou `timeout` secondes) sans bloquer l'interface.
     static func run(_ exe: URL, _ args: [String], stdin: String, cwd: URL, timeout: TimeInterval = 600) async throws -> Output {
         try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Output, Error>) in
@@ -51,6 +65,7 @@ enum AgentRunner {
     /// Envoie un message dans la session « hERALD » (la crée si besoin). Renvoie la réponse et l'identifiant de la session.
     static func claude(_ cfg: AgentConfig, session: String, system: String, prompt: String) async throws -> (text: String, session: String) {
         guard let exe = claudeURL(cfg) else { throw AgentFailure(message: L.t("agent.err.noclaude")) }
+        try await checkWorkFolder(cfg)
         let id = session.isEmpty ? UUID().uuidString.lowercased() : session
         // lecture seule + la seule commande `claude` (pour ouvrir des sous-sessions) ; tout le reste est refusé sans question
         var args = ["-p", "--output-format", "json", "--permission-mode", "dontAsk",
@@ -73,6 +88,7 @@ enum AgentRunner {
 
     static func command(_ cfg: AgentConfig, prompt: String) async throws -> String {
         guard !cfg.command.trimmingCharacters(in: .whitespaces).isEmpty else { throw AgentFailure(message: L.t("agent.err.nocommand")) }
+        try await checkWorkFolder(cfg)
         let r = try await run(URL(fileURLWithPath: "/bin/zsh"), ["-lc", cfg.command], stdin: prompt, cwd: cfg.workURL)
         guard r.code == 0 else { throw AgentFailure(message: shorten(r.err.isEmpty ? r.out : r.err)) }
         return r.out.trimmingCharacters(in: .whitespacesAndNewlines)
