@@ -26,6 +26,10 @@ struct HeraldApp: App {
                 Button(L.t("view.zoomout")) { setZoom(zoom - 0.1) }.keyboardShortcut("-", modifiers: .option)
                 Button(L.t("view.zoomreset")) { setZoom(1) }.keyboardShortcut("0", modifiers: .option)
             }
+            CommandGroup(after: .windowArrangement) {
+                Button(L.t("menubar.hide")) { Presence.shared.hideToMenuBar() }
+                    .keyboardShortcut("m", modifiers: [.command, .option])
+            }
             CommandGroup(replacing: .importExport) {
                 Button(L.t("menu.export")) { store.exportPlan() }.keyboardShortcut("e")
                 Button(L.t("menu.import")) { _ = store.importPlan() }
@@ -47,11 +51,17 @@ enum Zoom {
 /// Toute l'interface mise à l'échelle : la mise en page se fait à la taille divisée par le zoom, puis s'agrandit.
 struct ZoomedRoot: View {
     let zoom: Double
+    @Environment(\.openWindow) private var openWindow
+    @EnvironmentObject private var store: Store
     var body: some View {
         GeometryReader { g in
             RootView()
                 .frame(width: g.size.width / zoom, height: g.size.height / zoom)
                 .scaleEffect(zoom, anchor: .topLeading)
+        }
+        .onAppear {
+            Presence.shared.openMain = { openWindow(id: "main") }
+            Presence.shared.refreshStats = { Task { await store.refreshStats() } }
         }
         .frame(minWidth: 1120 * zoom, minHeight: 680 * zoom)
         .background(Socle.C.bg)
@@ -71,6 +81,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         Socle.apply()
+        Presence.shared.apply()
         // ⌥+ / ⌥− / ⌥0 quelle que soit la disposition du clavier (sur AZERTY, « + » demande Maj) et au pavé numérique.
         NSEvent.addLocalMonitorForEvents(matching: .keyDown) { e in
             let mods = e.modifierFlags.intersection([.command, .option, .control])
@@ -85,7 +96,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return nil
         }
     }
-    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
+    /// Avec la barre de menus, fermer la fenêtre ne quitte pas l'appli (elle continue ses relevés).
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { !IconMode.current.showsMenuBar }
+
+    /// Clic sur l'icône du Dock quand la fenêtre est fermée.
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        if !flag { Presence.shared.showMain(); return false }
+        return true
+    }
 }
 
 enum Tab: String, CaseIterable { case calendar, tracking, drafts, stats, feedback, watch, channels }
@@ -369,6 +387,7 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var key = Keychain.get("nexus")
     @State private var youtubeKey = Keychain.get("youtube")
+    @State private var iconMode = IconMode.current
     @State private var domain = ""
     @State private var goat = ""
 
@@ -396,6 +415,11 @@ struct SettingsView: View {
             }
             Text(L.t("settings.goatcounter.note")).socle(Socle.T.meta).foregroundStyle(Socle.C.textSubtle)
                 .fixedSize(horizontal: false, vertical: true)
+            Field(label: L.t("settings.icon")) {
+                SocleSegmented(options: IconMode.allCases, selection: iconMode, label: \.label, onSelect: { iconMode = $0 })
+                Text(L.t("settings.icon.note")).socle(Socle.T.meta).foregroundStyle(Socle.C.textSubtle)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             Field(label: L.t("settings.data")) {
                 HStack {
                     Text(Storage.url.path).socle(Socle.T.monoSm).foregroundStyle(Socle.C.textMuted).lineLimit(1).truncationMode(.middle)
@@ -432,6 +456,8 @@ struct SettingsView: View {
                     Keychain.set(youtubeKey.trimmingCharacters(in: .whitespacesAndNewlines), "youtube")
                     store.data.siteDomain = SiteInput.domain(domain)
                     store.data.goatcounter = SiteInput.goatcounter(goat)
+                    IconMode.current = iconMode
+                    Presence.shared.apply()
                     dismiss()
                 }
                     .buttonStyle(SocleButtonStyle(.primary)).fixedSize().keyboardShortcut(.defaultAction)
