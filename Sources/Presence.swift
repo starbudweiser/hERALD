@@ -65,10 +65,19 @@ final class Presence: NSObject {
         return menu
     }
 
+    /// Clic gauche : ouvre ou ferme la fenêtre. Clic droit (ou Ctrl-clic) : menu, juste sous l'icône.
     @objc private func statusClicked() {
         guard let button = item?.button else { return }
-        let y = button.isFlipped ? button.bounds.maxY + 4 : -4
-        makeMenu().popUp(positioning: nil, at: NSPoint(x: 0, y: y), in: button)
+        let ev = NSApp.currentEvent
+        let wantsMenu = ev?.type == .rightMouseUp || ev?.modifierFlags.contains(.control) == true
+        if wantsMenu {
+            let y = button.isFlipped ? button.bounds.maxY + 4 : -4
+            makeMenu().popUp(positioning: nil, at: NSPoint(x: 0, y: y), in: button)
+        } else if let w = mainWindow, NSApp.isActive, !w.isMiniaturized {
+            hideToMenuBar()      // fenêtre au premier plan : on la ferme (l'appli reste dans la barre de menus)
+        } else {
+            showMain()           // fermée, cachée derrière d'autres applis ou réduite : on l'amène devant
+        }
     }
 
     /// Le fanion et ses ondes du logo, sans le carré sombre : fanion ambre, hampe grise, ondes bleues.
@@ -120,7 +129,9 @@ final class Presence: NSObject {
 
     @objc func showMain() {
         NSApp.activate(ignoringOtherApps: true)
-        if let w = mainWindow { w.makeKeyAndOrderFront(nil) } else { openMain?() }
+        if let w = mainWindow { w.makeKeyAndOrderFront(nil) }
+        else if let w = NSApp.windows.first(where: { $0.canBecomeMain && $0.isMiniaturized }) { w.deminiaturize(nil) }
+        else { openMain?() }
     }
 
     /// Réduit dans la barre de menus : ferme la fenêtre, l'appli continue de tourner.
