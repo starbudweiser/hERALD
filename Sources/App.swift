@@ -328,7 +328,15 @@ struct TabsBar: View {
         HStack(spacing: Socle.M.space4) {
             ForEach(Tab.allCases, id: \.self) { t in
                 Button { tab = t } label: {
-                    Text(L.t("tab.\(t.rawValue)")).socle(Socle.T.label)
+                    HStack(spacing: Socle.M.space1) {
+                        Text(L.t("tab.\(t.rawValue)")).socle(Socle.T.label)
+                        if t == .feedback, store.unreadFeedback > 0 {
+                            Text(L.number(store.unreadFeedback)).socle(Socle.T.caption).foregroundStyle(.white)
+                                .padding(.horizontal, 6).padding(.vertical, 1)
+                                .background(Socle.C.accent, in: Capsule())
+                                .help(L.t("feedback.unread", store.unreadFeedback))
+                        }
+                    }
                         .foregroundStyle(tab == t ? Socle.C.textStrong : Socle.C.textMuted)
                         .padding(.vertical, Socle.M.space2_5)
                         .overlay(alignment: .bottom) { Rectangle().fill(tab == t ? Socle.C.accent : .clear).frame(height: 2) }
@@ -414,6 +422,8 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var key = Keychain.get("nexus")
     @State private var youtubeKey = Keychain.get("youtube")
+    @State private var redditID = Keychain.get("reddit.id")
+    @State private var redditSecret = Keychain.get("reddit.secret")
     @State private var iconMode = IconMode.current
     @State private var agentOn = AgentConfig.current.enabled
     @State private var agentSettings = false
@@ -435,6 +445,19 @@ struct SettingsView: View {
                         .fixedSize(horizontal: false, vertical: true)
                     Spacer(minLength: 0)
                     Button(L.t("settings.youtubekey.open")) { openURL("https://console.cloud.google.com/apis/library/youtube.googleapis.com") }
+                        .buttonStyle(SocleButtonStyle(.tertiary, height: Socle.M.sizeControl)).fixedSize()
+                }
+            }
+            Field(label: L.t("settings.reddit")) {
+                HStack(spacing: Socle.M.space2) {
+                    TextField(L.t("settings.reddit.id"), text: $redditID).socleField()
+                    SecureField(L.t("settings.reddit.secret"), text: $redditSecret).socleField()
+                }
+                HStack(spacing: Socle.M.space2) {
+                    Text(L.t("settings.reddit.note")).socle(Socle.T.meta).foregroundStyle(Socle.C.textSubtle)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 0)
+                    Button(L.t("settings.reddit.open")) { openURL("https://www.reddit.com/prefs/apps") }
                         .buttonStyle(SocleButtonStyle(.tertiary, height: Socle.M.sizeControl)).fixedSize()
                 }
             }
@@ -493,6 +516,8 @@ struct SettingsView: View {
                 Button(L.t("action.save")) {
                     Keychain.set(key.trimmingCharacters(in: .whitespacesAndNewlines), "nexus")
                     Keychain.set(youtubeKey.trimmingCharacters(in: .whitespacesAndNewlines), "youtube")
+                    Keychain.set(redditID.trimmingCharacters(in: .whitespacesAndNewlines), "reddit.id")
+                    Keychain.set(redditSecret.trimmingCharacters(in: .whitespacesAndNewlines), "reddit.secret")
                     store.data.siteDomain = SiteInput.domain(domain)
                     store.data.goatcounter = SiteInput.goatcounter(goat)
                     var ac = AgentConfig.current; ac.enabled = agentOn; AgentConfig.current = ac

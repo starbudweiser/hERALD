@@ -68,6 +68,11 @@ struct Feedback: Codable, Identifiable, Hashable {
     var kind: FeedbackKind = .comment
     var value = 1
     var text = ""
+    /// Réponses relevées automatiquement (Reddit) : auteur, lien, identifiant source (pour ne pas les doubler), non lue.
+    var author: String?
+    var url: String?
+    var source: String?
+    var unread: Bool?
 }
 
 struct Post: Codable, Identifiable, Hashable {
@@ -87,6 +92,7 @@ struct Post: Codable, Identifiable, Hashable {
     var agent: AgentThread?
 
     func draft(_ l: Lang) -> String { drafts[l.rawValue] ?? "" }
+    var unreadFeedback: Int { feedback.filter { $0.unread == true }.count }
 
     /// Total d'un type de retour : somme des commentaires, dernière valeur relevée pour les compteurs.
     func total(_ k: FeedbackKind) -> Int {

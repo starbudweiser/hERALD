@@ -250,7 +250,8 @@ final class Store: ObservableObject {
         statsChecking = true
         defer { statsChecking = false }
         let keys = StatKeys(youtube: Keychain.get("youtube"), nexus: Keychain.get("nexus"),
-                            goatcounter: (data.goatcounter ?? "").trimmingCharacters(in: .whitespaces))
+                            goatcounter: (data.goatcounter ?? "").trimmingCharacters(in: .whitespaces),
+                            redditID: Keychain.get("reddit.id"), redditSecret: Keychain.get("reddit.secret"))
         let now = Date()
         // Liste des publications à relever (lien présent, plateforme lisible).
         var jobs: [(Int, Int, StatPlatform, String)] = []
@@ -271,6 +272,7 @@ final class Store: ObservableObject {
             case .failure(let e): ytError = e.message
             }
         }
+        var newReplies = 0
         for (ci, pi, pl, link) in jobs {
             var result: Result<StatSnapshot, WatchError>
             if pl == .youtube {
@@ -289,6 +291,12 @@ final class Store: ObservableObject {
                 p.stats = h; p.statsError = nil
             case .failure(let e): p.statsError = e.message
             }
+            // Reddit : les nouvelles réponses arrivent dans les retours de la publication, marquées non lues.
+            if pl == .reddit, let id = StatLink.redditID(link), case .success(let replies) = await StatsFetcher.redditReplies(id, keys: keys) {
+                let known = Set(p.feedback.compactMap(\.source))
+                let fresh = replies.filter { !known.contains($0.source ?? "") }
+                if !fresh.isEmpty { p.feedback.append(contentsOf: fresh); newReplies += fresh.count }
+            }
             data.campaigns[ci].posts[pi] = p
         }
         // Visites du site entier.
@@ -303,6 +311,16 @@ final class Store: ObservableObject {
             }
         }
         data.statsChecked = now
+        if newReplies > 0 { NSApp.requestUserAttention(.informationalRequest) }
+    }
+
+    /// Nombre de réponses relevées automatiquement et pas encore lues (toutes publications).
+    var unreadFeedback: Int { data.campaigns.reduce(0) { $0 + $1.posts.reduce(0) { $0 + $1.unreadFeedback } } }
+
+    func markFeedbackRead(_ postID: UUID) {
+        guard var p = post(postID), p.unreadFeedback > 0 else { return }
+        for i in p.feedback.indices where p.feedback[i].unread == true { p.feedback[i].unread = false }
+        update(p)
     }
 
     /// Saisie manuelle (Instagram, Facebook, Discord, X… ou correction).

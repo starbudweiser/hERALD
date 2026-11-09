@@ -89,14 +89,23 @@ struct FeedbackView: View {
     @State private var date = Date()
     @State private var text = ""
     @State private var message: String?
+    /// Réponses non lues au moment où la publication a été ouverte (restent signalées « nouveau » pendant la lecture).
+    @State private var fresh: Set<UUID> = []
+
+    private func open(_ id: UUID) {
+        selected = id; message = nil
+        fresh = Set(store.post(id)?.feedback.filter { $0.unread == true }.map(\.id) ?? [])
+        store.markFeedbackRead(id)
+    }
 
     var body: some View {
         SplitLayout {
             ForEach(store.posts.sorted { ($0.status == .published ? 0 : 1, $0.date) < ($1.status == .published ? 0 : 1, $1.date) }) { p in
-                ListRow(selected: p.id == selected) { selected = p.id; message = nil } content: {
+                ListRow(selected: p.id == selected) { open(p.id) } content: {
                     HStack(spacing: Socle.M.space1_5) {
                         Text(p.title).socle(Socle.T.labelStrong).foregroundStyle(Socle.C.textStrong).lineLimit(1)
                         Spacer(minLength: 0)
+                        if p.unreadFeedback > 0 { Badge(text: L.t("feedback.unread", p.unreadFeedback), kind: .accent) }
                         StatusBadge(status: p.status)
                     }
                     Text(summary(p)).socle(Socle.T.meta).foregroundStyle(Socle.C.textSubtle).lineLimit(1)
@@ -172,9 +181,24 @@ struct FeedbackView: View {
                             HStack(alignment: .firstTextBaseline, spacing: Socle.M.space2) {
                                 Text(L.day(f.date)).socle(Socle.T.meta).foregroundStyle(Socle.C.textSubtle).frame(width: 90, alignment: .leading)
                                 Badge(text: f.kind.label, kind: f.kind == .comment ? .accent : .neutral)
-                                Text(L.number(f.value)).socle(Socle.T.labelStrong).foregroundStyle(Socle.C.textStrong)
-                                Text(f.text).socle(Socle.T.body).foregroundStyle(Socle.C.text).fixedSize(horizontal: false, vertical: true)
+                                if let a = f.author {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        HStack(spacing: Socle.M.space1_5) {
+                                            Text("u/\(a)").socle(Socle.T.labelStrong).foregroundStyle(Socle.C.textStrong)
+                                            if fresh.contains(f.id) || f.unread == true { Badge(text: L.t("feedback.new"), kind: .success) }
+                                        }
+                                        Text(f.text).socle(Socle.T.body).foregroundStyle(Socle.C.text)
+                                            .lineLimit(8).fixedSize(horizontal: false, vertical: true).textSelection(.enabled)
+                                    }
+                                } else {
+                                    Text(L.number(f.value)).socle(Socle.T.labelStrong).foregroundStyle(Socle.C.textStrong)
+                                    Text(f.text).socle(Socle.T.body).foregroundStyle(Socle.C.text).fixedSize(horizontal: false, vertical: true)
+                                }
                                 Spacer(minLength: 0)
+                                if let u = f.url {
+                                    Button { openURL(u) } label: { Image(systemName: "arrow.up.right.square") }
+                                        .buttonStyle(.plain).foregroundStyle(Socle.C.textMuted).help(L.t("feedback.reply.open"))
+                                }
                                 Button {
                                     var q = p; q.feedback.removeAll { $0.id == f.id }; store.update(q)
                                 } label: { Image(systemName: "trash") }

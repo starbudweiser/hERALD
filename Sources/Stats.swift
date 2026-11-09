@@ -143,6 +143,44 @@ struct StatKeys {
     var youtube = ""
     var nexus = ""
     var goatcounter = ""   // code du site GoatCounter (sous-domaine), pas un secret
+    var redditID = ""      // app Reddit de type « script » (reddit.com/prefs/apps) : lecture seule, jeton d'application
+    var redditSecret = ""
+}
+
+/// Jeton OAuth « application only » de Reddit (client_credentials), gardé en mémoire jusqu'à son expiration.
+actor RedditAuth {
+    static let shared = RedditAuth()
+    private var token = ""
+    private var expires = Date.distantPast
+    private var forKey = ""
+
+    static var userAgent: String { "macos:fr.stephan.herald:\(Watcher.version) (read-only campaign stats)" }
+
+    func bearer(id: String, secret: String) async -> Result<String, WatchError> {
+        guard !id.isEmpty, !secret.isEmpty else { return .failure(WatchError(message: L.t("stats.err.redditkey"))) }
+        if forKey == id, Date() < expires, !token.isEmpty { return .success(token) }
+        var r = URLRequest(url: URL(string: "https://www.reddit.com/api/v1/access_token")!, timeoutInterval: 20)
+        r.httpMethod = "POST"
+        r.setValue("Basic " + Data("\(id):\(secret)".utf8).base64EncodedString(), forHTTPHeaderField: "Authorization")
+        r.setValue(Self.userAgent, forHTTPHeaderField: "User-Agent")
+        r.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+        r.httpBody = Data("grant_type=client_credentials".utf8)
+        do {
+            let (d, resp) = try await URLSession.shared.data(for: r)
+            let code = (resp as? HTTPURLResponse)?.statusCode ?? 0
+            guard (200..<300).contains(code) else {
+                return .failure(WatchError(message: code == 401 ? L.t("stats.err.redditkey.bad") : L.t("watch.http", code)))
+            }
+            guard let j = try? JSONSerialization.jsonObject(with: d) as? [String: Any], let t = j["access_token"] as? String else {
+                return .failure(WatchError(message: L.t("watch.parse")))
+            }
+            token = t; forKey = id
+            expires = Date().addingTimeInterval(TimeInterval(StatsFetcher.int(j["expires_in"]) ?? 3600) - 120)
+            return .success(t)
+        } catch {
+            return .failure(WatchError(message: error.localizedDescription))
+        }
+    }
 }
 
 enum StatsFetcher {
@@ -153,7 +191,7 @@ enum StatsFetcher {
             return await youtube([id], key: keys.youtube).flatMap { r in r[id].map { .success($0) } ?? .failure(WatchError(message: L.t("stats.err.notfound"))) }
         case .reddit:
             guard let id = StatLink.redditID(link) else { return .failure(WatchError(message: L.t("stats.err.link"))) }
-            return await reddit(id)
+            return await reddit(id, keys: keys)
         case .bluesky:
             guard let (who, key) = StatLink.bluesky(link) else { return .failure(WatchError(message: L.t("stats.err.link"))) }
             return await bluesky(who, key)
@@ -208,15 +246,51 @@ enum StatsFetcher {
         }
     }
 
-    static func reddit(_ id: String) async -> Result<StatSnapshot, WatchError> {
-        guard let url = URL(string: "https://www.reddit.com/comments/\(id).json?limit=1&raw_json=1") else { return .failure(WatchError(message: L.t("stats.err.link"))) }
-        return await get(url).flatMap { j in
+    /// Fil d'un post par l'API officielle (oauth.reddit.com) : Reddit refuse désormais les lectures anonymes en .json.
+    private static func redditThread(_ id: String, keys: StatKeys, limit: Int) async -> Result<Any, WatchError> {
+        let auth = await RedditAuth.shared.bearer(id: keys.redditID, secret: keys.redditSecret)
+        guard case .success(let token) = auth else { if case .failure(let e) = auth { return .failure(e) }; return .failure(WatchError(message: L.t("watch.parse"))) }
+        guard let url = URL(string: "https://oauth.reddit.com/comments/\(id)?limit=\(limit)&sort=new&raw_json=1") else { return .failure(WatchError(message: L.t("stats.err.link"))) }
+        return await get(url, headers: ["Authorization": "bearer \(token)", "User-Agent": RedditAuth.userAgent])
+    }
+
+    static func reddit(_ id: String, keys: StatKeys) async -> Result<StatSnapshot, WatchError> {
+        return await redditThread(id, keys: keys, limit: 1).flatMap { j in
             guard let arr = j as? [[String: Any]], let listing = arr.first?["data"] as? [String: Any],
                   let child = (listing["children"] as? [[String: Any]])?.first?["data"] as? [String: Any] else {
                 return .failure(WatchError(message: L.t("watch.parse")))
             }
             return .success(StatSnapshot(likes: int(child["score"]), comments: int(child["num_comments"]),
                                          shares: int(child["num_crossposts"])))
+        }
+    }
+
+    /// Réponses d'un post Reddit (tout le fil, aplati), sans celles de l'auteur du post ni les messages supprimés.
+    static func redditReplies(_ id: String, keys: StatKeys) async -> Result<[Feedback], WatchError> {
+        return await redditThread(id, keys: keys, limit: 200).flatMap { j in
+            guard let arr = j as? [[String: Any]], arr.count >= 2,
+                  let post = ((arr[0]["data"] as? [String: Any])?["children"] as? [[String: Any]])?.first?["data"] as? [String: Any] else {
+                return .failure(WatchError(message: L.t("watch.parse")))
+            }
+            let op = post["author"] as? String ?? ""
+            var out: [Feedback] = []
+            func walk(_ listing: Any?) {
+                guard let children = ((listing as? [String: Any])?["data"] as? [String: Any])?["children"] as? [[String: Any]] else { return }
+                for c in children where c["kind"] as? String == "t1" {
+                    guard let d = c["data"] as? [String: Any], let cid = d["name"] as? String else { continue }
+                    let author = d["author"] as? String ?? ""
+                    let body = (d["body"] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+                    if author != op, author != "[deleted]", !body.isEmpty, body != "[deleted]", body != "[removed]" {
+                        let created = (d["created_utc"] as? Double).map { Date(timeIntervalSince1970: $0) } ?? Date()
+                        let link = (d["permalink"] as? String).map { "https://www.reddit.com\($0)" }
+                        out.append(Feedback(date: created, kind: .comment, value: 1, text: body,
+                                            author: author, url: link, source: "reddit:\(cid)", unread: true))
+                    }
+                    walk(d["replies"])
+                }
+            }
+            walk(arr[1])
+            return .success(out)
         }
     }
 
