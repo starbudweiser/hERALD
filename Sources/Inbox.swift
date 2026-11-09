@@ -347,9 +347,12 @@ private struct Merger {
             guard let date = J.date(J.str(f, "date")) else { throw fail("feedback", "date") }
             let kind = J.str(f, "kind").flatMap { FeedbackKind(rawValue: $0.lowercased()) } ?? .comment
             let value = (f["value"] as? Int) ?? Int(J.str(f, "value") ?? "") ?? 1
-            let fb = Feedback(id: J.uuid(f, "id") ?? UUID(), date: date, kind: kind, value: value, text: J.str(f, "text") ?? "")
-            let dup = p.feedback.contains { $0.id == fb.id || ($0.kind == kind && $0.value == value && $0.text == fb.text
-                && abs($0.date.timeIntervalSince(date)) < 1) }
+            // Réponse relevée sur une plateforme (Reddit…) : auteur, lien, identifiant source ; arrive non lue.
+            let source = J.str(f, "source")
+            let fb = Feedback(id: J.uuid(f, "id") ?? UUID(), date: date, kind: kind, value: value, text: J.str(f, "text") ?? "",
+                              author: J.str(f, "author"), url: J.str(f, "url"), source: source, unread: source != nil ? true : nil)
+            let dup = p.feedback.contains { $0.id == fb.id || (source != nil && $0.source == source)
+                || ($0.kind == kind && $0.value == value && $0.text == fb.text && abs($0.date.timeIntervalSince(date)) < 1) }
             if !dup { p.feedback.append(fb); n += 1 }
         }
         return n
