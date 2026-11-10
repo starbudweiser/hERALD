@@ -262,6 +262,8 @@ struct SettingsView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Socle.M.space4) {
             Text(L.t("settings.title")).socle(Socle.T.heading).foregroundStyle(Socle.C.textStrong)
+            ScrollView {
+            VStack(alignment: .leading, spacing: Socle.M.space4) {
             Field(label: L.t("settings.nexuskey")) {
                 SecureField("", text: $key).socleField()
                 Text(L.t("settings.nexuskey.note")).socle(Socle.T.meta).foregroundStyle(Socle.C.textSubtle)
@@ -345,6 +347,9 @@ struct SettingsView: View {
                 .background(Socle.C.control, in: RoundedRectangle(cornerRadius: Socle.M.radius))
             }
             Callout(kind: .info, text: L.t("rule.long"))
+            }
+            .padding(.trailing, Socle.M.space3)
+            }
             HStack(spacing: Socle.M.space2) {
                 Spacer()
                 Button(L.t("action.cancel")) { dismiss() }
@@ -366,7 +371,7 @@ struct SettingsView: View {
             }
         }
         .padding(Socle.M.space6)
-        .frame(width: 640)
+        .frame(width: 660, height: 640)
         .onAppear { domain = store.data.siteDomain ?? ""; goat = store.data.goatcounter ?? "" }
         .sheet(isPresented: $agentSettings) { AgentSettingsView() }
         .background(Socle.C.surface)

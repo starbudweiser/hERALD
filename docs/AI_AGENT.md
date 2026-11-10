@@ -12,7 +12,7 @@ Turn it on in **Settings → AI agent (optional)**, then **Set up the agent…**
 | **Live progress** | "Reading: file…", "Searching…", elapsed time and a **Stop** button; the chat scrolls to the latest answer by itself; Return sends, ⇧Return adds a line break. |
 | **Task awareness** | Each request carries the task sheet: id, title, date, channel, status, link, notes, drafts in four languages, latest statistics. The plan and the campaign notes are added when they changed. |
 | **Proposals you apply in one click** | The agent can propose changes to notes, drafts (fr, en, es, it), status, and an addition to the campaign notes. Each field shows its value **before** and **after** with a checkbox: apply everything, or only your selection. **Undo** puts everything back. |
-| **Hard limits** | The agent never publishes, never marks a post "Published" (any such proposal is ignored) and cannot change any other field. |
+| **Hard limits** | The agent never publishes, never sends an email (outreach emails leave only from your own click on *Send*), never marks a post "Published" (any such proposal is ignored) and cannot change any other field. |
 | **Campaign instructions** | *Edit the campaign → Instructions for the agent*: tone, audience, constraints. Sent with every request. |
 | **Quick actions** | Buttons above the input (write the draft, improve the hook, translate, check before publishing, what next?). Edit them in the agent settings: one per line, `Title | instruction`. |
 | **Formatted answers** | Headings, lists, quotes, code blocks (with a Copy button), tables and rich text display properly. |

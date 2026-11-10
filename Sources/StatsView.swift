@@ -59,9 +59,6 @@ struct StatsView: View {
             SocleSegmented(options: StatsPeriod.allCases, selection: period, label: \.label, onSelect: { period = $0 })
             Spacer()
             if store.statsChecking { ProgressView().controlSize(.small) }
-            Text(store.data.statsChecked.map { L.t("stats.checked", L.date($0)) } ?? L.t("stats.never"))
-                .socle(Socle.T.meta).foregroundStyle(Socle.C.textSubtle)
-            Text(L.t(store.campaignActive ? "stats.freq.hour" : "stats.freq.day")).socle(Socle.T.meta).foregroundStyle(Socle.C.textSubtle)
             Button(L.t("stats.manual.add")) { entry = store.posts.first { !store.platform($0).automatic }?.id ?? store.posts.first?.id }
                 .buttonStyle(SocleButtonStyle(.secondary, height: Socle.M.sizeControl)).fixedSize()
                 .disabled(store.posts.isEmpty)

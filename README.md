@@ -8,7 +8,7 @@
 ---
 ## 🇬🇧 English
 
-**Golden rule:** hERALD prepares and tracks. It never posts, never sends a message: you copy the text and publish it yourself.
+**Golden rule:** hERALD prepares and tracks. It never publishes: you copy the text and post it yourself. It only sends an outreach email when you click *Send*, after a confirmation, through your Mail app.
 
 ### ✨ Talk to your AI agent, from inside your plan (optional)
 
@@ -25,6 +25,11 @@ Switch it on in *Settings → AI agent* and every task of your plan gets a chat 
 
 Details, setup and tips: [docs/AI_AGENT.md](docs/AI_AGENT.md).
 
+- **Window**: sidebar panel (campaign picker, Today, Calendar, Posts, Contacts, Statistics, Feedback, Monitoring, Channels, AI agent, Browser; ⌘1–⌘9), view header with search (⌘F), status bar. Default 1280 × 800.
+- **Today**: key figures (views +24 h, interactions, downloads, next milestone) and a to-do list: posts due or late, published posts without a link, unread replies, due follow-ups.
+- **Posts**: tracking and drafts in one list (filter by status and channel) with a tabbed inspector: Text (FR/EN/ES/IT, Copy), Numbers, Feedback, Notes; link after publishing and *Mark published*.
+- **Contacts (outreach)**: YouTubers, press, sites, Discord… with status, next follow-up, coverage link, message thread and a mail editor (first-contact and follow-up templates in the contact's language). *Send* goes through the mail client chosen in Settings: the **Mail app** (AppleScript: no password handled; send, read the replies of your contacts' addresses, move them to Mail's Trash) or **another client** (opens a ready-to-send message). Always on your click, after a confirmation. Plans from before the redesign are migrated once.
+- **Browser**: built-in web view (tabs, persistent cookies, no password autofill). Every link of the app opens there; ⌥-click or the button opens the Mac's browser.
 - **Plan**: campaigns with an event date and countdown, dated milestones (teaser, D-day announcement, follow-up), posts per channel (Nexus, Reddit, Discord, YouTube, GitHub, X/Bluesky, Instagram, forums) with status *idea → draft → approved → published* and link. Month calendar and tracking table.
 - **Drafts** per post in French, English, Spanish and Italian, copied in one click.
 - **Monitoring**: watch GitHub releases and Nexus mod pages (read only, public APIs; the optional Nexus API key stays in the macOS keychain). Checked automatically once a week at launch; weekly report readable in the app and copyable as Markdown.
@@ -40,7 +45,7 @@ Details, setup and tips: [docs/AI_AGENT.md](docs/AI_AGENT.md).
 
 ### Drop box (automation)
 
-hERALD watches `~/Library/Application Support/hERALD/Inbox`. Every `.json` file dropped there (a change file, or a whole `.herald` plan) is merged into the plan at once, then moved to `processed/` or `errors/`; each change is logged in `journal.log` (also visible in Settings). Merge is careful: an existing item (same `id`, else same title and same day, or same name) only gets its empty fields filled — use `"overwrite": true` to replace. All or nothing: one error and nothing is applied. hERALD still never publishes anything.
+hERALD watches `~/Library/Application Support/hERALD/Inbox`. Every `.json` file dropped there (a change file, or a whole `.herald` plan) is merged into the plan at once, then moved to `processed/` or `errors/`; each change is logged in `journal.log` (also visible in Settings). Merge is careful: an existing item (same `id`, else same title and same day, or same name) only gets its empty fields filled — use `"overwrite": true` to replace. All or nothing: one error and nothing is applied. hERALD still never publishes anything (contacts are merged too: `"contacts": [...]`, by name).
 
 `tools/herald_add` (python3, no dependency) writes these files for you, so a script or an AI assistant can feed hERALD:
 
@@ -79,7 +84,7 @@ Build: `./build_app.sh` · tests: `tests/run_tests.sh`
 ---
 ## 🇫🇷 Français
 
-**Règle d'or :** hERALD prépare et suit. Il ne publie jamais, n'envoie aucun message : vous copiez le texte et publiez vous-même.
+**Règle d'or :** hERALD prépare et suit. Il ne publie jamais : vous copiez le texte et publiez vous-même. Il n'envoie un e-mail de démarchage que sur votre clic sur *Envoyer*, après confirmation, par votre app Mail.
 
 ### ✨ Discutez avec votre agent IA, depuis votre plan (facultatif)
 
@@ -96,6 +101,11 @@ Activez-le dans *Réglages → Agent IA* : chaque tâche de votre plan a une dis
 
 Détails, réglages et astuces : [docs/AGENT_IA.md](docs/AGENT_IA.md).
 
+- **Fenêtre** : barre latérale en panneau (sélecteur de campagne, Aujourd'hui, Calendrier, Publications, Contacts, Statistiques, Retours, Veille, Canaux, Agent IA, Navigateur ; ⌘1–⌘9), en-tête de vue avec recherche (⌘F), barre d'état. 1280 × 800 par défaut.
+- **Aujourd'hui** : chiffres clés (vues +24 h, interactions, téléchargements, prochain jalon) et liste « À faire » : publications du jour ou en retard, publiées sans lien, réponses non lues, relances dues.
+- **Publications** : suivi et brouillons dans une seule liste (filtre par statut et canal) avec un inspecteur à onglets : Texte (FR/EN/ES/IT, Copier), Chiffres, Retours, Notes ; lien après publication et *Marquer publié*.
+- **Contacts (démarchage)** : youtubeurs, presse, sites, Discord… avec statut, prochaine relance, lien obtenu, fil des messages et éditeur de mail (modèles premier contact et relance dans la langue du contact). *Envoyer* passe par le client de messagerie choisi dans les Réglages : l'**app Mail** (AppleScript : aucun mot de passe manipulé ; envoi, lecture des réponses des adresses de vos contacts, mise à la corbeille de Mail) ou **un autre client** (ouvre un message prêt à envoyer). Toujours sur votre clic, après confirmation. Les plans d'avant la refonte sont migrés une fois.
+- **Navigateur** : vue web intégrée (onglets, cookies conservés, pas de saisie automatique de mots de passe). Tous les liens de l'appli s'y ouvrent ; ⌥-clic ou le bouton ouvre le navigateur du Mac.
 - **Plan** : campagnes avec date d'événement et compte à rebours, jalons datés (teaser, annonce du Jour J, suivi), publications par canal avec statut *idée → brouillon → validé → publié* et lien. Calendrier du mois et tableau de suivi.
 - **Brouillons** par publication en français, anglais, espagnol et italien, copiés en un clic.
 - **Veille** : versions GitHub et pages de mods Nexus (lecture seule, API publiques ; la clé API Nexus facultative reste dans le trousseau macOS). Vérification automatique une fois par semaine au lancement ; rapport hebdomadaire lisible dans l'appli et copiable en Markdown.

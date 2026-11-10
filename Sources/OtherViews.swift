@@ -49,21 +49,22 @@ struct FeedbackView: View {
     private func detail(_ p: Post) -> some View {
         VStack(alignment: .leading, spacing: Socle.M.space3) {
             HStack {
-                Text(p.title).socle(Socle.T.heading).foregroundStyle(Socle.C.textStrong)
+                Text(p.title).socle(Socle.T.heading).foregroundStyle(Socle.C.textStrong).lineLimit(1)
                 Spacer()
                 if !p.link.isEmpty {
                     Button(L.t("action.open")) { openURL(p.link) }
                         .buttonStyle(SocleButtonStyle(.secondary, height: Socle.M.sizeControl)).fixedSize()
                 }
             }
-            HStack(spacing: Socle.M.space2) {
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: Socle.M.space2), GridItem(.flexible())], spacing: Socle.M.space2) {
                 ForEach(FeedbackKind.allCases.filter { $0 != .other }) { k in
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(k.label).socle(Socle.T.meta).foregroundStyle(Socle.C.textMuted)
-                        Text(L.number(p.total(k))).socle(Socle.T.stat).socleValue()
+                    HStack(spacing: Socle.M.space2) {
+                        Text(k.label).socle(Socle.T.meta).foregroundStyle(Socle.C.textMuted).lineLimit(1)
+                        Spacer(minLength: 0)
+                        Text(L.number(p.total(k))).socle(Socle.T.labelStrong).socleValue().lineLimit(1)
                     }
-                    .padding(Socle.M.space3).frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Socle.C.surface, in: RoundedRectangle(cornerRadius: Socle.M.radius))
+                    .padding(.horizontal, Socle.M.space3).frame(height: 34)
+                    .background(Socle.C.bgSunken, in: RoundedRectangle(cornerRadius: Socle.M.radius))
                 }
             }
             // Saisie d'un retour
@@ -90,14 +91,13 @@ struct FeedbackView: View {
                 .buttonStyle(SocleButtonStyle(.primary, height: Socle.M.sizeControlLg)).fixedSize()
             }
             HStack(spacing: Socle.M.space2) {
-                Text(message ?? L.t("feedback.csv.help")).socle(Socle.T.meta)
-                    .foregroundStyle(message == nil ? Socle.C.textSubtle : Socle.C.success)
-                    .fixedSize(horizontal: false, vertical: true)
+                if let message { Text(message).socle(Socle.T.meta).foregroundStyle(Socle.C.success).lineLimit(1) }
                 Spacer()
                 Button(L.t("feedback.import")) {
                     if let n = store.importFeedback(into: p.id) { message = L.t("feedback.imported", n) }
                 }
                 .buttonStyle(SocleButtonStyle(.secondary, height: Socle.M.sizeControl)).fixedSize()
+                .help(L.t("feedback.csv.help"))
             }
             Divider().overlay(Socle.C.border)
             if p.feedback.isEmpty { EmptyState(text: L.t("feedback.none")) }

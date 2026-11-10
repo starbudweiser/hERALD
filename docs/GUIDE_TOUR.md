@@ -3,10 +3,11 @@
 Notes pour la future visite guidée de hERALD, au premier lancement et depuis le menu Aide.
 
 ## Étapes prévues
-1. Règle d'or : hERALD prépare et suit, il ne publie jamais.
+1. Règle d'or : hERALD prépare et suit, il ne publie jamais ; il n'envoie un e-mail de démarchage que sur votre clic, par l'app Mail.
 2. Campagnes et jalons, compte à rebours.
-3. Calendrier et tableau de suivi (statuts, lignes alternées, publications faites estompées).
-4. Brouillons en quatre langues, copie en un clic.
+3. Cadre de la fenêtre (barre latérale, ⌘1–⌘9, recherche ⌘F), vue Aujourd'hui, Calendrier.
+4. Publications : liste filtrable et inspecteur (Texte en quatre langues, Chiffres, Retours, Notes), copie en un clic, « Marquer publié ».
+4 bis. Contacts : démarchage (youtubeurs, presse), fil des messages, éditeur de mail, envoi et lecture des réponses par l'app Mail (client choisi dans les Réglages), relances ; navigateur intégré.
 5. Statistiques : relevés automatiques par lien, saisie manuelle, rapport.
 6. Veille GitHub et Nexus.
 7. Boîte de dépôt (automatisation).
