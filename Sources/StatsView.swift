@@ -9,7 +9,7 @@ extension StatPlatform {
         case .reddit: Color(red: 0.98, green: 0.45, blue: 0.09)
         case .bluesky: Color(red: 0.22, green: 0.60, blue: 0.96)
         case .github: Socle.C.textMuted
-        case .nexus: Color(red: 0.96, green: 0.62, blue: 0.04)
+        case .nexus, .nexusPage: Color(red: 0.96, green: 0.62, blue: 0.04)
         case .site: Socle.C.success
         case .instagram: Color(red: 0.83, green: 0.33, blue: 0.49)
         case .facebook: Color(red: 0.26, green: 0.40, blue: 0.70)
@@ -92,6 +92,12 @@ struct StatsView: View {
                         }
                         .buttonStyle(SocleButtonStyle(.secondary, height: Socle.M.sizeControl)).fixedSize()
                         .disabled((pendingLinks[p.id] ?? "").trimmingCharacters(in: .whitespaces).isEmpty)
+                        Button(L.t("stats.missing.none")) {
+                            if var q = store.post(p.id) { q.noLink = true; store.update(q) }
+                            pendingLinks[p.id] = nil
+                        }
+                        .buttonStyle(SocleButtonStyle(.tertiary, height: Socle.M.sizeControl)).fixedSize()
+                        .help(L.t("stats.missing.none.help"))
                     }
                 }
             }

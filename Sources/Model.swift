@@ -90,6 +90,8 @@ struct Post: Codable, Identifiable, Hashable {
     var stats: [StatSnapshot]?
     var statsError: String?
     var agent: AgentThread?
+    /// Publication sans lien à relever (dossier de presse, message Discord…) : jamais signalée « publiée sans lien ».
+    var noLink: Bool?
 
     func draft(_ l: Lang) -> String { drafts[l.rawValue] ?? "" }
     var unreadFeedback: Int { feedback.filter { $0.unread == true }.count }

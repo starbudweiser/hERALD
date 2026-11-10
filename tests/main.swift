@@ -408,5 +408,16 @@ var srt = m1; srt[0].visits = [OMAVisit(date: d0, count: 1, uniques: 1)]; srt[1]
 check(OMA.sorted(srt).map(\.slug) == ["beta", "alpha"], "tri par visites")
 check(!String(decoding: try! Storage.encode(sample), as: UTF8.self).contains("\"oma\"") && back.oma == nil, "plan sans suivi OpenMacApps : champ absent, relu")
 
+// Publiées sans lien : une publication marquée « pas de lien » n'est plus signalée
+var nl = Sample.make(now: Date()); nl.campaigns[0].posts[0].status = .published; nl.campaigns[0].posts[0].link = ""
+let nlBefore = StatsSummary(campaign: nl.campaigns[0], data: nl, platform: { _ in .other }, period: .campaign).missingLinks.count
+nl.campaigns[0].posts[0].noLink = true
+check(StatsSummary(campaign: nl.campaigns[0], data: nl, platform: { _ in .other }, period: .campaign).missingLinks.count == nlBefore - 1, "« pas de lien » retire la publication de la liste")
+
+// Liens Nexus : fiche de mod relevée, article et forum à saisir à la main
+check(StatPlatform.detect(link: "https://www.nexusmods.com/skyrimspecialedition/mods/12604", channel: nil, site: "") == .nexus, "fiche Nexus automatique")
+check(StatPlatform.detect(link: "https://www.nexusmods.com/skyrimspecialedition/articles/12615", channel: nil, site: "") == .nexusPage
+      && StatPlatform.detect(link: "https://forums.nexusmods.com/topic/1-x/", channel: nil, site: "") == .nexusPage && !StatPlatform.nexusPage.automatic, "article et forum Nexus manuels")
+
 print(failures == 0 ? "OK : tous les tests passent" : "\(failures) échec(s)")
 exit(failures == 0 ? 0 : 1)

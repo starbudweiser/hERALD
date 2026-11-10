@@ -304,6 +304,7 @@ final class Store: ObservableObject {
             for (pi, p) in c.posts.enumerated() where !p.link.trimmingCharacters(in: .whitespaces).isEmpty {
                 let pl = platform(p)
                 if pl.automatic { jobs.append((ci, pi, pl, p.link)) }
+                else if p.statsError != nil { data.campaigns[ci].posts[pi].statsError = nil }   // devenue manuelle (ex. article Nexus)
             }
         }
         // YouTube : un seul appel pour toutes les vidéos (quota).

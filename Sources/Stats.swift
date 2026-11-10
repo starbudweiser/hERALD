@@ -21,7 +21,7 @@ struct StatSnapshot: Codable, Hashable {
 
 /// Plateforme déduite du lien de la publication (sinon du type de canal).
 enum StatPlatform: String, CaseIterable, Identifiable, Codable {
-    case youtube, reddit, bluesky, github, nexus, site, instagram, facebook, discord, x, other
+    case youtube, reddit, bluesky, github, nexus, nexusPage, site, instagram, facebook, discord, x, other
     var id: String { rawValue }
     var label: String { L.t("stats.platform.\(rawValue)") }
     /// Relevé automatique possible (les autres se saisissent à la main).
@@ -32,7 +32,7 @@ enum StatPlatform: String, CaseIterable, Identifiable, Codable {
         case .reddit: "bubble.left.and.bubble.right"
         case .bluesky, .x: "at"
         case .github: "chevron.left.forwardslash.chevron.right"
-        case .nexus: "shippingbox"
+        case .nexus, .nexusPage: "shippingbox"
         case .site: "globe"
         case .instagram: "camera"
         case .facebook: "person.2"
@@ -49,7 +49,8 @@ enum StatPlatform: String, CaseIterable, Identifiable, Codable {
             if h.hasSuffix("reddit.com") || h == "redd.it" { return .reddit }
             if h == "bsky.app" { return .bluesky }
             if h == "github.com" { return .github }
-            if h.hasSuffix("nexusmods.com") { return .nexus }
+            // Fiche de mod : API Nexus ; article, forum… : pas d'API et pages protégées, chiffres à saisir à la main.
+            if h.hasSuffix("nexusmods.com") { return StatLink.nexus(t) != nil ? .nexus : .nexusPage }
             if h.hasSuffix("instagram.com") { return .instagram }
             if h.hasSuffix("facebook.com") || h == "fb.watch" { return .facebook }
             if h.hasSuffix("discord.com") || h.hasSuffix("discord.gg") { return .discord }
@@ -469,7 +470,7 @@ struct StatsSummary {
             }
         }
         curve = pts
-        missingLinks = campaign.posts.filter { $0.status == .published && $0.link.trimmingCharacters(in: .whitespaces).isEmpty }
+        missingLinks = campaign.posts.filter { $0.status == .published && $0.noLink != true && $0.link.trimmingCharacters(in: .whitespaces).isEmpty }
             .sorted { $0.date < $1.date }
         stale = rows.filter { !$0.platform.automatic && ($0.latest?.date ?? .distantPast) < now.addingTimeInterval(-86400) }
     }
