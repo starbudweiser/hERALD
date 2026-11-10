@@ -115,6 +115,7 @@ struct ItemRow<Trailing: View>: View {
     let title: String
     var meta: String = ""
     var metaColor: Color = Socle.C.textSubtle
+    var highlight = false
     let action: () -> Void
     @ViewBuilder var trailing: Trailing
     @State private var hover = false
@@ -134,7 +135,7 @@ struct ItemRow<Trailing: View>: View {
             }
             .padding(.horizontal, Socle.M.space3)
             .frame(height: 46)
-            .background(selected ? Socle.C.surfaceSelected : hover ? Socle.C.surfaceHover : .clear)
+            .background(selected ? Socle.C.surfaceSelected : hover ? Socle.C.surfaceHover : highlight ? Socle.C.brand.opacity(0.12) : .clear)
             .overlay(alignment: .leading) { Rectangle().fill(selected ? Socle.C.brand : .clear).frame(width: 2) }
             .contentShape(Rectangle())
         }
@@ -146,8 +147,8 @@ struct ItemRow<Trailing: View>: View {
 
 extension ItemRow where Trailing == EmptyView {
     init(selected: Bool, symbol: String, tint: Color = Socle.C.textMuted, title: String, meta: String = "",
-         metaColor: Color = Socle.C.textSubtle, action: @escaping () -> Void) {
-        self.init(selected: selected, symbol: symbol, tint: tint, title: title, meta: meta, metaColor: metaColor, action: action) { EmptyView() }
+         metaColor: Color = Socle.C.textSubtle, highlight: Bool = false, action: @escaping () -> Void) {
+        self.init(selected: selected, symbol: symbol, tint: tint, title: title, meta: meta, metaColor: metaColor, highlight: highlight, action: action) { EmptyView() }
     }
 }
 
