@@ -267,11 +267,11 @@ final class Store: ObservableObject {
     /// heure ; sinon un par jour. Vérifié toutes les 10 minutes, en arrière-plan, sans rien afficher.
     func startStats() {
         guard statsTimer == nil else { return }
-        let t = Timer(timeInterval: 600, repeats: true) { [weak self] _ in Task { @MainActor in await self?.refreshStatsIfDue() } }
+        let t = Timer(timeInterval: 600, repeats: true) { [weak self] _ in Task { @MainActor in await self?.refreshStatsIfDue(); self?.autoScanRepliesIfDue() } }
         t.tolerance = 120   // le système regroupe les réveils (économie d'énergie en arrière-plan)
         RunLoop.main.add(t, forMode: .common)
         statsTimer = t
-        Task { await refreshStatsIfDue() }
+        Task { await refreshStatsIfDue(); autoScanRepliesIfDue() }
     }
 
     var campaignActive: Bool {

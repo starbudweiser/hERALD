@@ -27,14 +27,15 @@ extension Store {
 
     /// Lit dans l'app Mail les réponses des contacts (adresses enregistrées) et les ajoute au fil.
     /// Renvoie le nombre de nouvelles réponses, ou un message d'erreur.
-    func scanReplies() -> (count: Int, error: String?) {
+    func scanReplies() -> (count: Int, error: String?, names: [String]) {
         var total = 0
+        var names: [String] = []
         var list = campaign.outreach ?? []
         for i in list.indices {
             let addr = list[i].email.trimmingCharacters(in: .whitespaces)
             guard !addr.isEmpty else { continue }
             switch MailSender.scan(address: addr) {
-            case .failure(.script(let e)): return (total, e)
+            case .failure(.script(let e)): return (total, e, names)
             case .success(let mails):
                 let known = Set(list[i].messages.compactMap(\.mailID))
                 for m in mails where !known.contains(m.id) {
@@ -42,11 +43,12 @@ extension Store {
                                                             body: m.body, to: m.sender, mailID: m.id))
                     if list[i].status.waiting { list[i].status = .replied; list[i].nextFollowUp = nil }
                     total += 1
+                    if !names.contains(list[i].name) { names.append(list[i].name) }
                 }
             }
         }
         if total > 0 { campaign.outreach = list }
-        return (total, nil)
+        return (total, nil, names)
     }
 
     /// Met à la corbeille de Mail une réponse lue ; le texte reste dans le fil.
@@ -271,6 +273,34 @@ enum MailSender {
     /// Ouvre le brouillon dans le client par défaut (l'utilisateur envoie lui-même).
     static func openDraft(to: String, subject: String, body: String) {
         if let u = Outreach.mailtoURL(to: to, subject: subject, body: body) { NSWorkspace.shared.open(u) }
+    }
+}
+#endif
+
+#if canImport(AppKit)
+import AppKit
+import UserNotifications
+
+extension Store {
+    /// Relève automatique des réponses des contacts (toutes les 30 minutes), seulement si l'app Mail est déjà ouverte
+    /// (jamais lancée par hERALD) et s'il y a un contact avec une adresse ; notification à chaque nouvelle réponse.
+    func autoScanRepliesIfDue() {
+        guard MailClient.current == .mail,
+              Date().timeIntervalSince(UserDefaults.standard.object(forKey: "replyScanAt") as? Date ?? .distantPast) >= 1800,
+              contacts.contains(where: { !$0.email.trimmingCharacters(in: .whitespaces).isEmpty }),
+              NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.mail").isEmpty == false
+        else { return }
+        UserDefaults.standard.set(Date(), forKey: "replyScanAt")
+        let r = scanReplies()
+        guard r.error == nil, r.count > 0, Bundle.main.bundleIdentifier != nil else { return }
+        let body = r.names.count == 1 ? L.t("notif.reply.body", r.names[0]) : L.t("notif.reply.many", r.names.count)
+        let center = UNUserNotificationCenter.current()
+        center.requestAuthorization(options: [.alert, .sound]) { ok, _ in
+            guard ok else { return }
+            let c = UNMutableNotificationContent()
+            c.title = L.t("notif.reply.title"); c.body = body; c.sound = .default
+            center.add(UNNotificationRequest(identifier: "reply-\(UUID().uuidString)", content: c, trigger: nil))
+        }
     }
 }
 #endif

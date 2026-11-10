@@ -323,6 +323,10 @@
                 },
                 "to": {
                   "type": "string"
+                },
+                "mailID": {
+                  "type": "string",
+                  "description": "identifiant du message dans l'app Mail (message id) : la relève des réponses ne le réimporte pas"
                 }
               }
             }

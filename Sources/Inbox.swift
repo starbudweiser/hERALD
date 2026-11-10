@@ -402,7 +402,8 @@ private struct Merger {
             return OutreachMessage(id: J.uuid(m, "id") ?? UUID(), date: date,
                                    kind: J.str(m, "kind").flatMap { MessageKind(rawValue: $0) } ?? .note,
                                    direction: J.str(m, "direction").flatMap { MessageDirection(rawValue: $0) } ?? .draft,
-                                   subject: J.str(m, "subject") ?? "", body: J.str(m, "body") ?? "", to: J.str(m, "to") ?? "")
+                                   subject: J.str(m, "subject") ?? "", body: J.str(m, "body") ?? "", to: J.str(m, "to") ?? "",
+                                   mailID: J.str(m, "mailID"))
         }
     }
 
