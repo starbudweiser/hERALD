@@ -102,6 +102,77 @@ struct Post: Codable, Identifiable, Hashable {
     }
 }
 
+// MARK: Démarchage
+
+enum ContactKind: String, Codable, CaseIterable, Identifiable {
+    case youtuber, press, site, discord, forum, other
+    var id: String { rawValue }
+    var label: String { L.t("contact.kind.\(rawValue)") }
+    var symbol: String {
+        switch self {
+        case .youtuber: "play.rectangle"
+        case .press: "newspaper"
+        case .site: "globe"
+        case .discord: "message"
+        case .forum: "text.bubble"
+        case .other: "person"
+        }
+    }
+}
+
+enum ContactStatus: String, Codable, CaseIterable, Identifiable {
+    case toContact, contacted, followedUp, replied, accepted, declined, covered
+    var id: String { rawValue }
+    var label: String { L.t("contact.status.\(rawValue)") }
+    /// En attente d'une réponse : une relance peut être due.
+    var waiting: Bool { self == .contacted || self == .followedUp }
+}
+
+enum MessageKind: String, Codable, CaseIterable, Identifiable {
+    case first, followUp, reply, note
+    var id: String { rawValue }
+    var label: String { L.t("message.kind.\(rawValue)") }
+}
+
+enum MessageDirection: String, Codable, CaseIterable, Identifiable {
+    case draft, sent, received
+    var id: String { rawValue }
+    var label: String { L.t("message.dir.\(rawValue)") }
+}
+
+struct OutreachMessage: Codable, Identifiable, Hashable {
+    var id = UUID()
+    var date = Date()
+    var kind: MessageKind = .first
+    var direction: MessageDirection = .draft
+    var subject = ""
+    var body = ""
+    var to = ""
+    /// Identifiant du message dans l'app Mail (réponses lues automatiquement) ; absent une fois mis à la corbeille.
+    var mailID: String?
+}
+
+struct Contact: Codable, Identifiable, Hashable {
+    var id = UUID()
+    var name = ""
+    var kind: ContactKind = .youtuber
+    var url = ""
+    var email = ""
+    var lang: Lang = .en
+    var status: ContactStatus = .toContact
+    var nextFollowUp: Date?
+    /// Lien de l'article ou de la vidéo obtenu.
+    var coverage = ""
+    var notes = ""
+    var messages: [OutreachMessage] = []
+
+    /// Relance due : on attend une réponse et la date prévue est atteinte.
+    func followUpDue(_ now: Date = Date()) -> Bool {
+        guard status.waiting, let d = nextFollowUp else { return false }
+        return Calendar.current.startOfDay(for: d) <= Calendar.current.startOfDay(for: now)
+    }
+}
+
 struct Campaign: Codable, Identifiable, Hashable {
     var id = UUID()
     var name = ""
@@ -112,6 +183,8 @@ struct Campaign: Codable, Identifiable, Hashable {
     /// Consignes permanentes pour l'agent IA (ton, public, contraintes propres à la campagne).
     var brief: String?
     var agent: AgentThread?
+    /// Contacts de démarchage (facultatif : absent des anciens plans).
+    var outreach: [Contact]?
     /// Lecture simple du brief (le champ enregistré est facultatif pour relire les anciens plans).
     var agentBrief: String {
         get { brief ?? "" }

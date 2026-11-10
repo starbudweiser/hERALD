@@ -18,6 +18,14 @@ final class Store: ObservableObject {
 
     init() {
         if welcome { Storage.save(data) }
+        // Reprise unique des publications de démarchage en contacts (copie de sécurité du plan avant).
+        var d = data
+        if Outreach.migrate(&d) > 0 {
+            let backup = Storage.dir.appendingPathComponent("plan_avant_demarchage.json")
+            if !FileManager.default.fileExists(atPath: backup.path) { try? FileManager.default.copyItem(at: Storage.url, to: backup) }
+            data = d
+            Storage.save(d)
+        }
     }
 
     // MARK: Boîte de dépôt

@@ -253,6 +253,7 @@ struct SettingsView: View {
     @State private var redditID = Keychain.get("reddit.id")
     @State private var redditSecret = Keychain.get("reddit.secret")
     @State private var iconMode = IconMode.current
+    @State private var mailClient = MailClient.current
     @State private var agentOn = AgentConfig.current.enabled
     @State private var agentSettings = false
     @State private var domain = ""
@@ -295,6 +296,13 @@ struct SettingsView: View {
             }
             Text(L.t("settings.goatcounter.note")).socle(Socle.T.meta).foregroundStyle(Socle.C.textSubtle)
                 .fixedSize(horizontal: false, vertical: true)
+            Field(label: L.t("mail.client")) {
+                SocleSegmented(options: MailClient.allCases, selection: mailClient, label: { $0 == .mail ? "Mail" : L.t("mail.client.shortother") },
+                               onSelect: { mailClient = $0 })
+                Text(mailClient.label).socle(Socle.T.meta).foregroundStyle(Socle.C.textMuted).lineLimit(1)
+                Text(L.t("mail.client.note")).socle(Socle.T.meta).foregroundStyle(Socle.C.textSubtle)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             Field(label: L.t("settings.icon")) {
                 SocleSegmented(options: IconMode.allCases, selection: iconMode, label: \.label, onSelect: { iconMode = $0 })
                 Text(L.t("settings.icon.note")).socle(Socle.T.meta).foregroundStyle(Socle.C.textSubtle)
@@ -350,6 +358,7 @@ struct SettingsView: View {
                     store.data.goatcounter = SiteInput.goatcounter(goat)
                     var ac = AgentConfig.current; ac.enabled = agentOn; AgentConfig.current = ac
                     IconMode.current = iconMode
+                    MailClient.current = mailClient
                     Presence.shared.apply()
                     dismiss()
                 }

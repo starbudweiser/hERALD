@@ -292,5 +292,52 @@ var cfgS = AgentConfig(); cfgS.sessionID = "86f09b56-284f-4d83-a4e6-382a37ca4568
 check(AgentContext.system(config: cfgS, campaign: ac).contains("claude --resume 86f09b56-284f-4d83-a4e6-382a37ca4568"), "l'agent connaît l'identifiant de sa session")
 check(!AgentContext.system(config: AgentConfig(), campaign: ac).contains("This session's id"), "pas d'identifiant tant que la session n'existe pas")
 
+
+// Démarchage : ancien plan sans « outreach », migration des publications de contact, fusion Inbox, AppleScript
+let opOld = #"{"format":1,"campaigns":[{"id":"11111111-1111-1111-1111-111111111111","name":"Ancien","eventDate":"2026-11-11T12:00:00Z","notes":"","milestones":[],"posts":[]}],"channels":[],"watch":[]}"#
+let opOldData = try! Storage.decode(Data(opOld.utf8))
+check(opOldData.campaigns[0].outreach == nil, "ancien plan sans outreach relu")
+check((try! Storage.decode(try! Storage.encode(opOldData))).campaigns.count == 1, "aller-retour d'un ancien plan")
+
+var opMig = AppData()
+let opChY = Channel(name: "YouTubeurs (démarchage)", kind: .youtube), opChD = Channel(name: "Discord MacProTips", kind: .discord, url: "https://discord.gg/x")
+opMig.channels = [opChY, opChD]
+var opCamp = Campaign(name: "Test")
+func opPost(_ t: String, _ ch: Channel, _ st: PostStatus, _ day: Int, link: String = "", notes: String = "") -> Post {
+    Post(title: t, date: Date(timeIntervalSince1970: Double(day) * 86400), channelID: ch.id, status: st, link: link, notes: notes)
+}
+opCamp.posts = [
+    opPost("E-mail à Andrew Tsai (proposition)", opChY, .approved, 100, link: "mailto:a@b.com", notes: "À envoyer ce soir.\n\n**Objet :** Hello\n\nHi Andrew,\nBye"),
+    opPost("Relance Andrew Tsai (si pas de réponse)", opChY, .idea, 108),
+    opPost("E-mail à Nightech (proposition)", opChY, .published, 99, link: "mailto:t@n.fr", notes: "Envoyé.\n\n**Objet :** Salut\n\nBonjour"),
+    opPost("MP Discord à MacProTips (proposition)", opChD, .published, 99, link: "https://discord.gg/x", notes: "MP.\n\n**Sujet / première ligne :** Free tools\n\nHi!"),
+    Post(title: "Publication normale", date: Date(), channelID: opChY.id, status: .idea)]
+opCamp.posts[4].title = "Autre publication"
+opMig.campaigns = [opCamp]
+check(Outreach.migrate(&opMig) == 3, "3 contacts repris")
+let opOc = opMig.campaigns[0].outreach!
+let opAndrew = opOc.first { $0.name == "Andrew Tsai" }!
+check(opAndrew.email == "a@b.com" && opAndrew.status == .toContact && opAndrew.messages.first?.direction == .draft && opAndrew.messages.first?.subject == "Hello", "brouillon d'Andrew : e-mail, objet, statut")
+check(opAndrew.nextFollowUp == Date(timeIntervalSince1970: 108 * 86400), "relance = date de la publication « Relance »")
+let opNig = opOc.first { $0.name == "Nightech" }!
+check(opNig.status == .contacted && opNig.messages.first?.direction == .sent && opNig.email == "t@n.fr", "Nightech : envoyé")
+check(opOc.first { $0.name == "MacProTips" }?.kind == .discord, "MacProTips : Discord")
+check(opMig.campaigns[0].posts.count == 1, "publications reprises retirées, les autres conservées")
+check(Outreach.migrate(&opMig) == 0, "migration idempotente")
+
+var opInbox = opMig
+let opCj = #"{"format":"herald-changes","contacts":[{"name":"Snazzy Labs","kind":"youtuber","email":"v@s.com","status":"contacted","messages":[{"date":"2026-11-10","kind":"first","direction":"sent","subject":"Hi","body":"x"}]},{"name":"nightech","coverage":"https://y.be/1"}]}"#
+let opRes = try! Inbox.merge(Data(opCj.utf8), into: &opInbox)
+let opOc2 = opInbox.campaigns[0].outreach!
+check(opRes.added == 1 && opRes.updated == 1 && opOc2.count == 4, "Inbox : un contact ajouté, un complété (fusion par nom)")
+check(opOc2.first { $0.name == "Nightech" }?.coverage == "https://y.be/1", "Inbox : champ vide complété")
+let opAgain = try! Inbox.merge(Data(opCj.utf8), into: &opInbox)
+check(opAgain.added == 0 && opAgain.updated == 0 && opInbox.campaigns[0].outreach!.first { $0.name == "Snazzy Labs" }!.messages.count == 1, "Inbox : second passage sans doublon")
+
+check(Outreach.appleScriptString(#"Dit "oui" \ non"#) == #""Dit \"oui\" \\ non""#, "échappement guillemets et barres")
+check(Outreach.appleScriptString("a\nb") == "\"a\" & linefeed & \"b\"", "sauts de ligne AppleScript")
+check(Outreach.mailScript(to: "x@y.z", subject: "S\"", body: "B").contains("send m"), "script d'envoi")
+check(Outreach.firstEmail("mailto:a@b.com?subject=x") == "a@b.com" && Outreach.firstEmail("écrire à t@n.fr ce soir") == "t@n.fr", "adresse e-mail lue")
+
 print(failures == 0 ? "OK : tous les tests passent" : "\(failures) échec(s)")
 exit(failures == 0 ? 0 : 1)

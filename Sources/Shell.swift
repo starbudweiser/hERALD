@@ -402,7 +402,7 @@ struct StatusBar: View {
     private var stats: String {
         guard let last = store.data.statsChecked else { return L.t("status.stats.none") }
         let next = last.addingTimeInterval(store.campaignActive ? 3600 : 86400)
-        return L.t("status.stats", L.date(last), L.date(max(next, Date())))
+        return L.t("status.stats", L.stamp(last), L.stamp(max(next, Date())))
     }
 }
 

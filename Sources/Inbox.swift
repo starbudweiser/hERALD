@@ -164,11 +164,12 @@ private struct Merger {
     mutating func mergeChanges(_ root: [String: Any]) throws {
         for c in root["channels"] as? [[String: Any]] ?? [] { try channel(c) }
         for w in root["watch"] as? [[String: Any]] ?? [] { try watch(w) }
-        let hasCampaignItems = ["milestones", "posts", "feedback"].contains { !((root[$0] as? [Any]) ?? []).isEmpty }
+        let hasCampaignItems = ["milestones", "posts", "feedback", "contacts"].contains { !((root[$0] as? [Any]) ?? []).isEmpty }
         guard hasCampaignItems || root["campaign"] != nil else { return }
         let ci = try campaignIndex(root["campaign"])
         for m in root["milestones"] as? [[String: Any]] ?? [] { try milestone(m, in: ci) }
         for p in root["posts"] as? [[String: Any]] ?? [] { try post(p, in: ci) }
+        for c in root["contacts"] as? [[String: Any]] ?? [] { try contact(c, in: ci) }
         for f in root["feedback"] as? [[String: Any]] ?? [] {
             guard let ref = J.str(f, "post"), let pi = findPost(ref, date: nil, in: ci) else { throw fail("feedback", "post") }
             let title = data.campaigns[ci].posts[pi].title
@@ -389,6 +390,54 @@ private struct Merger {
                 d["milestoneID"] = p.milestoneID.flatMap { msMap[$0] }?.uuidString
                 try post(d, in: ci)
             }
+            for d in try dicts(c.outreach ?? []) { try contact(d, in: ci) }
         }
+    }
+
+    // MARK: Contacts de démarchage
+
+    private func messages(_ d: [String: Any]) throws -> [OutreachMessage] {
+        try (d["messages"] as? [[String: Any]] ?? []).map { m in
+            guard let date = J.date(J.str(m, "date")) else { throw fail("contact", "messages.date") }
+            return OutreachMessage(id: J.uuid(m, "id") ?? UUID(), date: date,
+                                   kind: J.str(m, "kind").flatMap { MessageKind(rawValue: $0) } ?? .note,
+                                   direction: J.str(m, "direction").flatMap { MessageDirection(rawValue: $0) } ?? .draft,
+                                   subject: J.str(m, "subject") ?? "", body: J.str(m, "body") ?? "", to: J.str(m, "to") ?? "")
+        }
+    }
+
+    private mutating func contact(_ d: [String: Any], in ci: Int) throws {
+        let force = overwriteAll || (d["overwrite"] as? Bool ?? false)
+        let id = J.uuid(d, "id"), name = J.str(d, "name")
+        let kind = J.str(d, "kind").flatMap { ContactKind(rawValue: $0.lowercased()) }
+        let lang = J.str(d, "lang").flatMap { Lang(rawValue: $0.lowercased()) }
+        let status = J.str(d, "status").flatMap { ContactStatus(rawValue: $0) }
+        let follow = J.date(J.str(d, "nextFollowUp"))
+        let msgs = try messages(d)
+        var list = data.campaigns[ci].outreach ?? []
+        if let i = list.firstIndex(where: { $0.id == id || (name != nil && J.same($0.name, name!)) }) {
+            var c = list[i], changed = false
+            if force, let name, name != c.name { c.name = name; changed = true }
+            changed = fill(&c.kind, kind, empty: .other, force) || changed
+            changed = fill(&c.lang, lang, empty: .fr, force) || changed
+            changed = fill(&c.status, status, empty: .toContact, force) || changed
+            changed = fill(&c.url, J.str(d, "url"), empty: "", force) || changed
+            changed = fill(&c.email, J.str(d, "email"), empty: "", force) || changed
+            changed = fill(&c.coverage, J.str(d, "coverage"), empty: "", force) || changed
+            changed = fill(&c.notes, J.str(d, "notes"), empty: "", force) || changed
+            if let follow, force || c.nextFollowUp == nil { if c.nextFollowUp != follow { c.nextFollowUp = follow; changed = true } }
+            for m in msgs where !c.messages.contains(where: { $0.id == m.id || ($0.direction == m.direction && $0.subject == m.subject
+                && abs($0.date.timeIntervalSince(m.date)) < 1) }) { c.messages.append(m); changed = true }
+            if changed { list[i] = c; data.campaigns[ci].outreach = list; updated("contact", c.name) }
+            return
+        }
+        guard let name, !name.isEmpty else { throw fail("contact", "name") }
+        var c = Contact(id: id ?? UUID(), name: name, kind: kind ?? .other, url: J.str(d, "url") ?? "", email: J.str(d, "email") ?? "",
+                        lang: lang ?? .en, status: status ?? .toContact, nextFollowUp: follow, coverage: J.str(d, "coverage") ?? "",
+                        notes: J.str(d, "notes") ?? "")
+        c.messages = msgs
+        list.append(c)
+        data.campaigns[ci].outreach = list
+        added("contact", name)
     }
 }

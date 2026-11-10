@@ -46,6 +46,21 @@ extension Store {
         return out
     }
 
+
+    func contactTodos(now: Date) -> [TodoItem] {
+        var out: [TodoItem] = []
+        for c in contacts {
+            if c.followUpDue(now) {
+                out.append(TodoItem(kind: .followUp, contactID: c.id, title: c.name,
+                                    meta: c.nextFollowUp.map { L.t("contact.followup.on", L.shortDay($0)) } ?? ""))
+            } else if c.status.waiting {
+                out.append(TodoItem(kind: .tracking, contactID: c.id, title: c.name,
+                                    meta: c.nextFollowUp.map { L.t("contact.followup.on", L.shortDay($0)) } ?? c.status.label))
+            }
+        }
+        return out
+    }
+
     var todoCount: Int { todoItems().filter(\.urgent).count }
 }
 

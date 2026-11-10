@@ -14,6 +14,7 @@ lipo -create build/Herald-arm64 build/Herald-x86_64 -output "$APP/Contents/MacOS
 
 cp assets/hERALD.icns "$APP/Contents/Resources/AppIcon.icns"   # sources : assets/ (make_icon.sh)
 cp Resources/Info.plist "$APP/Contents/Info.plist"
+for l in Resources/*.lproj; do cp -R "$l" "$APP/Contents/Resources/"; done
 rm -rf build
 SIGN="$(cd .. && pwd)/_tools/sign_app.sh"
 if [ -x "$SIGN" ]; then "$SIGN" "$APP"; else codesign --force --deep -s - "$APP"; fi

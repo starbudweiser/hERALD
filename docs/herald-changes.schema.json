@@ -229,6 +229,109 @@
           }
         ]
       }
+    },
+    "contacts": {
+      "type": "array",
+      "description": "Contacts de démarchage (youtubeurs, presse…) de la campagne. Fusion par nom ou id ; « overwrite » comme pour les publications.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "youtuber",
+              "press",
+              "site",
+              "discord",
+              "forum",
+              "other"
+            ]
+          },
+          "url": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "lang": {
+            "enum": [
+              "fr",
+              "en",
+              "es",
+              "it"
+            ]
+          },
+          "status": {
+            "enum": [
+              "toContact",
+              "contacted",
+              "followedUp",
+              "replied",
+              "accepted",
+              "declined",
+              "covered"
+            ]
+          },
+          "nextFollowUp": {
+            "type": "string"
+          },
+          "coverage": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "overwrite": {
+            "type": "boolean"
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "date"
+              ],
+              "properties": {
+                "date": {
+                  "type": "string"
+                },
+                "kind": {
+                  "enum": [
+                    "first",
+                    "followUp",
+                    "reply",
+                    "note"
+                  ]
+                },
+                "direction": {
+                  "enum": [
+                    "draft",
+                    "sent",
+                    "received"
+                  ]
+                },
+                "subject": {
+                  "type": "string"
+                },
+                "body": {
+                  "type": "string"
+                },
+                "to": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "required": [
+          "name"
+        ]
+      }
     }
   },
   "$defs": {
