@@ -475,6 +475,13 @@ enum L {
         "backup.err": "Sauvegarde impossible : %@",
         "backup.restored": "Plan restauré (l'ancien est gardé dans plan_avant_restauration.json).",
         "backup.note": "Un instantané par jour (30 gardés) et « plan-latest.herald », dans iCloud Drive › hERALD › Sauvegardes, 20 s après chaque modification. Un plan vide n'est jamais sauvegardé.",
+        "publish.open": "Publier dans le navigateur",
+        "publish.site": "Ouvrir le site",
+        "publish.close": "Fermer",
+        "publish.next": "Suivant",
+        "publish.links": "Liens et hashtags",
+        "publish.takeurl": "Prendre l'adresse de la page",
+        "publish.toolong": "Dépasse la limite de %d caractères",
     ]
 
     private static let en: [String: String] = [
@@ -932,6 +939,13 @@ enum L {
         "backup.err": "Backup failed: %@",
         "backup.restored": "Plan restored (the previous one is kept as plan_avant_restauration.json).",
         "backup.note": "One snapshot per day (30 kept) and “plan-latest.herald”, in iCloud Drive › hERALD › Sauvegardes, 20 s after each change. An empty plan is never backed up.",
+        "publish.open": "Publish in the browser",
+        "publish.site": "Open the site",
+        "publish.close": "Close",
+        "publish.next": "Next",
+        "publish.links": "Links and hashtags",
+        "publish.takeurl": "Use the page address",
+        "publish.toolong": "Over the %d-character limit",
     ]
 
     private static let es: [String: String] = [
@@ -1389,6 +1403,13 @@ enum L {
         "backup.err": "Copia imposible: %@",
         "backup.restored": "Plan restaurado (el anterior se guarda en plan_avant_restauration.json).",
         "backup.note": "Una copia al día (30 guardadas) y «plan-latest.herald», en iCloud Drive › hERALD › Sauvegardes, 20 s tras cada cambio. Un plan vacío nunca se guarda.",
+        "publish.open": "Publicar en el navegador",
+        "publish.site": "Abrir el sitio",
+        "publish.close": "Cerrar",
+        "publish.next": "Siguiente",
+        "publish.links": "Enlaces y hashtags",
+        "publish.takeurl": "Usar la dirección de la página",
+        "publish.toolong": "Supera el límite de %d caracteres",
     ]
 
     private static let it: [String: String] = [
@@ -1846,5 +1867,12 @@ enum L {
         "backup.err": "Backup impossibile: %@",
         "backup.restored": "Piano ripristinato (il precedente è in plan_avant_restauration.json).",
         "backup.note": "Un'istantanea al giorno (30 conservate) e «plan-latest.herald», in iCloud Drive › hERALD › Sauvegardes, 20 s dopo ogni modifica. Un piano vuoto non viene mai salvato.",
+        "publish.open": "Pubblica nel browser",
+        "publish.site": "Apri il sito",
+        "publish.close": "Chiudi",
+        "publish.next": "Avanti",
+        "publish.links": "Link e hashtag",
+        "publish.takeurl": "Usa l'indirizzo della pagina",
+        "publish.toolong": "Supera il limite di %d caratteri",
     ]
 }

@@ -77,11 +77,11 @@ final class BrowserModel: ObservableObject {
         if selected == id { selected = tabs.last?.id }
     }
 
-    func open(_ u: URL, newTab fresh: Bool = false) {
+    func open(_ u: URL, newTab fresh: Bool = false, reveal show: Bool = true) {
         let t = (fresh || current == nil) ? newTab() : current!
         selected = t.id
         t.load(u)
-        reveal?()
+        if show { reveal?() }
     }
 }
 

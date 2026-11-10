@@ -35,6 +35,8 @@ struct HeraldApp: App {
             }
             CommandGroup(after: .textEditing) {
                 Button(L.t("search.placeholder")) { ui.focusSearch += 1 }.keyboardShortcut("f")
+                Button(L.t("publish.open")) { ui.toggleWorkspace(store) }
+                    .keyboardShortcut("b", modifiers: [.command, .shift]).disabled(!store.hasCampaign)
             }
             CommandGroup(after: .toolbar) {
                 Button(L.t("view.zoomin")) { setZoom(zoom + 0.1) }.keyboardShortcut("+", modifiers: .option)

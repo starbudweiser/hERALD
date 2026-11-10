@@ -26,7 +26,9 @@ enum Tab: String, CaseIterable {
 /// État de l'interface (vue affichée, sélections, recherche, fenêtres) ; rien ici n'est enregistré dans le plan.
 @MainActor
 final class UIState: ObservableObject {
-    @Published var tab: Tab = .today { didSet { if tab != oldValue { query = "" } } }
+    @Published var tab: Tab = .today { didSet { if tab != oldValue { query = ""; workspace = nil } } }
+    /// Espace de publication ouvert (navigateur + panneau), ou nil.
+    @Published var workspace: Workspace?
     @Published var selectedPost: UUID?
     @Published var selectedContact: UUID?
     @Published var query = ""
@@ -72,7 +74,7 @@ struct RootView: View {
         HStack(spacing: 0) {
             Sidebar().padding(.leading, 12).padding(.vertical, 12)
             VStack(spacing: 12) {
-                ViewHeader(spec: spec(ui.tab))
+                if ui.workspace == nil { ViewHeader(spec: spec(ui.tab)) }
                 content.frame(maxWidth: .infinity, maxHeight: .infinity)
                 StatusBar()
             }
@@ -83,7 +85,7 @@ struct RootView: View {
             }
         }
         .background(Socle.C.bg)
-        .onAppear { BrowserModel.shared.reveal = { [weak ui] in ui?.tab = .browser; ui?.showSettings = false } }
+        .onAppear { BrowserModel.shared.reveal = { [weak ui] in if ui?.workspace == nil { ui?.tab = .browser }; ui?.showSettings = false } }
         .sheet(isPresented: $ui.editingCampaign) { CampaignSheet().environmentObject(store) }
         .sheet(isPresented: $ui.showSettings) { SettingsView().environmentObject(store) }
         .sheet(isPresented: $store.welcome) { WelcomeView().environmentObject(store) }
@@ -93,7 +95,9 @@ struct RootView: View {
     }
 
     @ViewBuilder private var content: some View {
-        if !store.hasCampaign && ui.tab.needsCampaign {
+        if let w = ui.workspace {
+            PublishWorkspace(target: w)
+        } else if !store.hasCampaign && ui.tab.needsCampaign {
             VStack(spacing: Socle.M.space3) {
                 EmptyState(text: L.t("campaign.empty")).frame(maxHeight: 120)
                 Button(L.t("campaign.add")) { store.addCampaign() }

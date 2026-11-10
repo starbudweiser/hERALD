@@ -137,6 +137,10 @@ struct ContactDetail: View {
                 Picker("", selection: contact.status) { ForEach(ContactStatus.allCases) { Text($0.label).tag($0) } }
                     .labelsHidden().fixedSize()
                 Spacer(minLength: 0)
+                if ui.workspace == nil {
+                    Button(L.t("publish.site")) { ui.openWorkspace(.contact(id), store) }
+                        .buttonStyle(SocleButtonStyle(.secondary, height: Socle.M.sizeControl)).fixedSize().disabled(c.url.isEmpty)
+                }
             }
         }
     }

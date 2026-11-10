@@ -86,7 +86,14 @@ struct TodayView: View {
                 ForEach(items) { it in
                     ItemRow(selected: it.id == selected, symbol: it.symbol,
                             tint: it.urgent ? Socle.C.brand : Socle.C.textMuted, title: it.title, meta: it.meta,
-                            metaColor: it.kind == .postLate ? Socle.C.danger : Socle.C.textSubtle) { open(it) }
+                            metaColor: it.kind == .postLate ? Socle.C.danger : Socle.C.textSubtle, action: { open(it) }) {
+                        Image(systemName: "arrow.up.forward.app").font(.system(size: 12)).foregroundStyle(Socle.C.textMuted)
+                            .frame(width: 24, height: 24).contentShape(Rectangle())
+                            .onTapGesture { open(it); ui.openWorkspace(it.contactID.map { .contact($0) } ?? .post(it.postID ?? UUID()), store) }
+                            .accessibilityLabel(it.contactID != nil ? L.t("publish.site") : L.t("publish.open"))
+                            .accessibilityAddTraits(.isButton)
+                            .help(it.contactID != nil ? L.t("publish.site") : L.t("publish.open"))
+                    }
                 }
             } detail: {
                 if let it = items.first(where: { $0.id == selected }) {

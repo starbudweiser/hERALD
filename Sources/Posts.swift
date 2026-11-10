@@ -226,6 +226,8 @@ struct PostInspector: View {
             TextField(L.t("post.linkafter"), text: post.link).socleField()
             HStack(spacing: Socle.M.space2) {
                 CopyButton(title: L.t("action.copy")) { text.wrappedValue }.disabled(text.wrappedValue.isEmpty)
+                Button(L.t("publish.open")) { ui.openWorkspace(.post(id), store) }
+                    .buttonStyle(SocleButtonStyle(.secondary, height: Socle.M.sizeControl)).fixedSize()
                 Spacer(minLength: 0)
                 Button(post.wrappedValue.status == .published ? L.t("post.published.done") : L.t("post.markpublished")) {
                     post.wrappedValue.status = .published
