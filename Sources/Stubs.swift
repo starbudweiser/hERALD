@@ -8,15 +8,6 @@ extension Store {
 }
 struct ContactsView: View { var body: some View { EmptyState(text: "…").soclePanel() } }
 struct BrowserView: View { var body: some View { EmptyState(text: "…") } }
-struct PostsView: View {
-    @EnvironmentObject var ui: UIState
-    var body: some View { TrackingView(selected: $ui.selectedPost) }
-}
 
 extension Store { func contactTodos(now: Date) -> [TodoItem] { [] } }
 struct ContactDetail: View { let id: UUID; var body: some View { EmptyState(text: "…") } }
-struct PostInspector: View {
-    let id: UUID
-    @Binding var selected: UUID?
-    var body: some View { PostEditor(id: id, selected: $selected) }
-}

@@ -278,7 +278,7 @@ struct StatsView: View {
     }
 }
 
-private struct EntryID: Identifiable { let id: UUID }
+struct EntryID: Identifiable { let id: UUID }
 
 private extension String {
     func ifEmpty(_ s: String) -> String { isEmpty ? s : self }

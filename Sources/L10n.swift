@@ -363,6 +363,16 @@ enum L {
         "today.nolink": "lien à ajouter",
         "today.nomilestone": "Aucun jalon à venir",
         "today.select": "Choisissez une ligne pour l'ouvrir ici.",
+        "insp.text": "Texte",
+        "insp.numbers": "Chiffres",
+        "insp.feedback": "Retours",
+        "insp.notes": "Notes",
+        "insp.numbers.none": "Aucun relevé pour cette publication.",
+        "insp.feedback.open": "Ouvrir dans Retours",
+        "post.linkafter": "Lien après publication",
+        "post.markpublished": "Marquer publié",
+        "post.published.done": "Publié ✓",
+        "filter.channels": "Tous les canaux",
     ]
 
     private static let en: [String: String] = [
@@ -708,6 +718,16 @@ enum L {
         "today.nolink": "link to add",
         "today.nomilestone": "No upcoming milestone",
         "today.select": "Pick a line to open it here.",
+        "insp.text": "Text",
+        "insp.numbers": "Numbers",
+        "insp.feedback": "Feedback",
+        "insp.notes": "Notes",
+        "insp.numbers.none": "No statistics for this post yet.",
+        "insp.feedback.open": "Open in Feedback",
+        "post.linkafter": "Link after publishing",
+        "post.markpublished": "Mark published",
+        "post.published.done": "Published ✓",
+        "filter.channels": "All channels",
     ]
 
     private static let es: [String: String] = [
@@ -1053,6 +1073,16 @@ enum L {
         "today.nolink": "falta el enlace",
         "today.nomilestone": "Ningún hito próximo",
         "today.select": "Elige una línea para abrirla aquí.",
+        "insp.text": "Texto",
+        "insp.numbers": "Cifras",
+        "insp.feedback": "Comentarios",
+        "insp.notes": "Notas",
+        "insp.numbers.none": "Aún no hay lecturas para esta publicación.",
+        "insp.feedback.open": "Abrir en Comentarios",
+        "post.linkafter": "Enlace tras publicar",
+        "post.markpublished": "Marcar publicado",
+        "post.published.done": "Publicado ✓",
+        "filter.channels": "Todos los canales",
     ]
 
     private static let it: [String: String] = [
@@ -1398,5 +1428,15 @@ enum L {
         "today.nolink": "link da aggiungere",
         "today.nomilestone": "Nessuna tappa in arrivo",
         "today.select": "Scegli una riga per aprirla qui.",
+        "insp.text": "Testo",
+        "insp.numbers": "Cifre",
+        "insp.feedback": "Riscontri",
+        "insp.notes": "Note",
+        "insp.numbers.none": "Nessuna lettura per questa pubblicazione.",
+        "insp.feedback.open": "Apri in Riscontri",
+        "post.linkafter": "Link dopo la pubblicazione",
+        "post.markpublished": "Segna pubblicato",
+        "post.published.done": "Pubblicato ✓",
+        "filter.channels": "Tutti i canali",
     ]
 }
