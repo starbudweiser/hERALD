@@ -62,15 +62,17 @@ extension Store {
     /// accompagne le message quand il est nouveau ou modifié, pour que l'agent retrouve la tâche concernée.
     @discardableResult
     func askAgent(_ t: AgentTarget, _ question: String, auto: Bool = false) async -> [AssistAction] {
-        let q = question.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !q.isEmpty, !agentBusy.contains(t), let ci = data.campaigns.firstIndex(where: { $0.id == campaign.id }) else { return [] }
+        let shown = question.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !shown.isEmpty, !agentBusy.contains(t), let ci = data.campaigns.firstIndex(where: { $0.id == campaign.id }) else { return [] }
         var found: [AssistAction] = []
+        // en mode assistance, un rappel accompagne la demande (une session reprise pèse davantage ses anciens échanges que le prompt système)
+        let q = assistOn && !auto ? "[hERALD assist mode is ON for this request: act through herald-act blocks as described in the system prompt; the user has authorized it.]\n" + shown : shown
         let cfg = AgentConfig.current
         agentBusy.insert(t); agentError[t] = nil; agentStart[t] = Date(); agentStatus[t] = L.t("agent.status.think")
         defer { agentBusy.remove(t); agentStatus[t] = nil; agentStart[t] = nil }
         let progress: @Sendable (String) -> Void = { [weak self] s in Task { @MainActor in self?.agentStatus[t] = s } }
         let before = agentThread(t)
-        mutateThread(t, ci) { $0.messages.append(AgentMessage(role: .user, text: q, auto: auto ? true : nil)) }
+        mutateThread(t, ci) { $0.messages.append(AgentMessage(role: .user, text: shown, auto: auto ? true : nil)) }
 
         let camp = data.campaigns[ci]
         let chan: (UUID?) -> String = { [unowned self] in channel($0)?.name ?? "—" }

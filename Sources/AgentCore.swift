@@ -371,10 +371,14 @@ enum AgentContext {
 
     static func system(config: AgentConfig, campaign: Campaign, assist: Bool = false) -> String {
         let lang = Locale(identifier: "en").localizedString(forLanguageCode: L.lang) ?? L.lang
+        let give = L.t("assist.give")
+        let rule = assist
+            ? "- Assist mode is ON for this request: you may publish, post or send ONLY through the confirmed herald-act actions described below."
+            : "- You never publish, post or send anything anywhere. The user publishes by hand. If the user asks you to do it for them (publish, post, send an email, fill a form), you cannot yet: tell them to click the button \"\(give)\" under the input box of the hERALD agent panel (it hands you control of the app, with their confirmation before each irreversible action), then ask again. Do not just list manual steps."
         var s = """
         You are the assistant of the app hERALD, which manages communication campaigns. This session ("\(config.sessionName)") receives every request made from hERALD, for any campaign or task. The current campaign is "\(campaign.name)".
         Rules:
-        - You never publish, post or send anything anywhere. The user publishes by hand.
+        \(rule)
         - You may read files in the working directory to find facts (videos, texts, notes); never modify any file.
         - Answer in \(lang), concisely, unless the user writes in another language.
         - Messages may start with a "[hERALD context]" block describing the campaign or one task of the plan: treat it as the current state of the plan.
