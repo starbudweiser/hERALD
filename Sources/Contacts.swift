@@ -183,7 +183,7 @@ struct ContactDetail: View {
                 }
             }
             Field(label: L.t("col.notes")) {
-                TextEditor(text: contact.notes).socle(Socle.T.body).socleField(multiline: true).frame(height: 64)
+                TextEditor(text: contact.notes).socle(Socle.T.body).socleField(multiline: true).frame(height: 150)
             }
             HStack {
                 Spacer(minLength: 0)
