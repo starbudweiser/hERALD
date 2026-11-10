@@ -6,7 +6,9 @@ import UniformTypeIdentifiers
 
 @MainActor
 final class Store: ObservableObject {
-    @Published var data = Storage.load() { didSet { Storage.save(data) } }
+    @Published var data = Storage.load() { didSet { Storage.save(data); scheduleBackup() } }
+    @Published var backupError: String?
+    private var backupWork: DispatchWorkItem?
     @Published var checking = false
     /// Premier lancement : propose (sans l'imposer) la campagne d'exemple.
     @Published var welcome = !FileManager.default.fileExists(atPath: Storage.url.path)
@@ -18,6 +20,7 @@ final class Store: ObservableObject {
 
     init() {
         if welcome { Storage.save(data) }
+        scheduleBackup()
         // Reprise unique des publications de démarchage en contacts (copie de sécurité du plan avant).
         var d = data
         if Outreach.migrate(&d) > 0 {
@@ -26,6 +29,28 @@ final class Store: ObservableObject {
             data = d
             Storage.save(d)
         }
+    }
+
+    // MARK: Sauvegarde iCloud
+
+    /// Une sauvegarde 20 s après la dernière modification (pas à chaque frappe).
+    func scheduleBackup() {
+        backupWork?.cancel()
+        let w = DispatchWorkItem { [weak self] in Task { @MainActor in self?.backupNow() } }
+        backupWork = w
+        DispatchQueue.main.asyncAfter(deadline: .now() + 20, execute: w)
+    }
+
+    func backupNow() { backupError = PlanBackup.run(data); objectWillChange.send() }
+
+    /// Remplace le plan par une sauvegarde choisie ; le plan actuel est d'abord copié à côté. Renvoie une erreur ou nil.
+    func restoreBackup(from url: URL) -> String? {
+        guard let d = try? Data(contentsOf: url), let p = try? Storage.decode(d), !p.campaigns.isEmpty else { return L.t("import.invalid") }
+        let safety = Storage.dir.appendingPathComponent("plan_avant_restauration.json")
+        try? FileManager.default.removeItem(at: safety)
+        try? FileManager.default.copyItem(at: Storage.url, to: safety)
+        data = p
+        return nil
     }
 
     // MARK: Boîte de dépôt

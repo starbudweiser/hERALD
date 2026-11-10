@@ -60,8 +60,9 @@ final class Presence: NSObject {
         let open = NSMenuItem(title: L.t("menubar.open"), action: #selector(showMain), keyEquivalent: "")
         let refresh = NSMenuItem(title: L.t("menubar.refresh"), action: #selector(doRefresh), keyEquivalent: "")
         let quit = NSMenuItem(title: L.t("menubar.quit"), action: #selector(quitApp), keyEquivalent: "")
-        [open, refresh, quit].forEach { $0.target = self }
-        menu.addItem(open); menu.addItem(refresh); menu.addItem(.separator()); menu.addItem(quit)
+        let about = NSMenuItem(title: L.t("side.about", "hERALD"), action: #selector(showAbout), keyEquivalent: "")
+        [open, refresh, about, quit].forEach { $0.target = self }
+        menu.addItem(open); menu.addItem(refresh); menu.addItem(.separator()); menu.addItem(about); menu.addItem(quit)
         return menu
     }
 
@@ -137,6 +138,7 @@ final class Presence: NSObject {
     /// Réduit dans la barre de menus : ferme la fenêtre, l'appli continue de tourner.
     func hideToMenuBar() { mainWindow?.close() }
 
+    @objc private func showAbout() { About.show() }
     @objc private func doRefresh() { refreshStats?() }
     @objc private func quitApp() { NSApp.terminate(nil) }
 }

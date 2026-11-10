@@ -14,10 +14,17 @@ struct HeraldApp: App {
                 .splashGated()
                 .environmentObject(store)
                 .environmentObject(ui)
-                .task { store.startInbox(); store.startStats(); await store.checkIfStale() }
+                .task {
+                    store.startInbox(); store.startStats()
+                    Updater.shared.start(busy: { store.statsChecking || store.checking || !store.agentBusy.isEmpty })
+                    await store.checkIfStale()
+                }
         }
         .defaultSize(width: 1280, height: 800)
         .commands {
+            CommandGroup(replacing: .appInfo) {
+                Button(L.t("side.about", "hERALD")) { About.show() }
+            }
             CommandGroup(replacing: .appSettings) {
                 Button(L.t("settings.title") + "…") { ui.showSettings = true }.keyboardShortcut(",")
             }
@@ -298,6 +305,8 @@ struct SettingsView: View {
             }
             Text(L.t("settings.goatcounter.note")).socle(Socle.T.meta).foregroundStyle(Socle.C.textSubtle)
                 .fixedSize(horizontal: false, vertical: true)
+            Field(label: L.t("upd.title")) { UpdateSection() }
+            Field(label: L.t("backup.title")) { BackupSection() }
             Field(label: L.t("mail.client")) {
                 SocleSegmented(options: MailClient.allCases, selection: mailClient, label: { $0 == .mail ? "Mail" : L.t("mail.client.shortother") },
                                onSelect: { mailClient = $0 })

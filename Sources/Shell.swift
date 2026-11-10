@@ -33,7 +33,6 @@ final class UIState: ObservableObject {
     @Published var focusSearch = 0
     @Published var showSettings = false
     @Published var editingCampaign = false
-    @Published var showAbout = false
     @Published var problem: String?
 
     /// La publication correspond-elle à la recherche en cours (titre, canal, notes) ?
@@ -88,7 +87,6 @@ struct RootView: View {
         .sheet(isPresented: $ui.editingCampaign) { CampaignSheet().environmentObject(store) }
         .sheet(isPresented: $ui.showSettings) { SettingsView().environmentObject(store) }
         .sheet(isPresented: $store.welcome) { WelcomeView().environmentObject(store) }
-        .sheet(isPresented: $ui.showAbout) { AboutView() }
         .alert(L.t("import.invalid.title"), isPresented: Binding(get: { ui.problem != nil }, set: { if !$0 { ui.problem = nil } })) {
             Button("OK") { ui.problem = nil }
         } message: { Text(ui.problem ?? "") }
@@ -269,7 +267,7 @@ struct Sidebar: View {
         VStack(alignment: .leading, spacing: 8) {
             VStack(alignment: .leading, spacing: 2) {
                 SidebarRow(symbol: "gearshape", title: L.t("settings.title"), count: 0, selected: false) { ui.showSettings = true }
-                SidebarRow(symbol: "info.circle", title: L.t("side.about", "hERALD"), count: 0, selected: false) { ui.showAbout = true }
+                SidebarRow(symbol: "info.circle", title: L.t("side.about", "hERALD"), count: 0, selected: false) { About.show() }
             }
             Divider().overlay(Socle.C.border)
             let (done, total) = store.publishedCount
@@ -404,29 +402,5 @@ struct StatusBar: View {
         guard let last = store.data.statsChecked else { return L.t("status.stats.none") }
         let next = last.addingTimeInterval(store.campaignActive ? 3600 : 86400)
         return L.t("status.stats", L.stamp(last), L.stamp(max(next, Date())))
-    }
-}
-
-// MARK: À propos
-
-struct AboutView: View {
-    @Environment(\.dismiss) private var dismiss
-    var body: some View {
-        let info = Bundle.main.infoDictionary ?? [:]
-        let version = info["CFBundleShortVersionString"] as? String ?? "?"
-        VStack(spacing: Socle.M.space3) {
-            Image(nsImage: NSApp.applicationIconImage).resizable().frame(width: 84, height: 84).accessibilityHidden(true)
-            Text(branded: "hERALD").font(.system(size: 17, weight: .bold)).foregroundStyle(Socle.C.textStrong)
-            Text(L.t("about.version", version)).socle(Socle.T.body).foregroundStyle(Socle.C.textMuted)
-            Text(branded: L.t("about.tagline")).socle(Socle.T.body).foregroundStyle(Socle.C.text).multilineTextAlignment(.center)
-            Text("starbudweiser").socle(Socle.T.labelStrong).foregroundStyle(Socle.C.textStrong)
-            Text(L.t("about.license")).socle(Socle.T.body).foregroundStyle(Socle.C.text)
-            Text(branded: L.t("rule.long")).socle(Socle.T.meta).foregroundStyle(Socle.C.textSubtle).multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
-            Button(L.t("action.done")) { dismiss() }.buttonStyle(SocleButtonStyle(.primary)).fixedSize().keyboardShortcut(.defaultAction)
-        }
-        .padding(Socle.M.space6)
-        .frame(width: 400)
-        .background(Socle.C.surface)
     }
 }

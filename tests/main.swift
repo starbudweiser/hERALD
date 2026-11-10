@@ -339,5 +339,18 @@ check(Outreach.appleScriptString("a\nb") == "\"a\" & linefeed & \"b\"", "sauts d
 check(Outreach.mailScript(to: "x@y.z", subject: "S\"", body: "B").contains("send m"), "script d'envoi")
 check(Outreach.firstEmail("mailto:a@b.com?subject=x") == "a@b.com" && Outreach.firstEmail("écrire à t@n.fr ce soir") == "t@n.fr", "adresse e-mail lue")
 
+
+// Sauvegarde iCloud : écriture, plan vide refusé, rotation, versions
+let bkDir = FileManager.default.temporaryDirectory.appendingPathComponent("herald-bk-\(UUID().uuidString)")
+if case .success = PlanBackup.write(AppData(), to: bkDir) { check(false, "plan vide jamais sauvegardé") } else { check(!FileManager.default.fileExists(atPath: bkDir.path), "plan vide : aucun fichier écrit") }
+var bkPlan = AppData(); bkPlan.campaigns = [Campaign(name: "B")]
+for day in 0..<35 { _ = PlanBackup.write(bkPlan, to: bkDir, now: Date(timeIntervalSince1970: 1_700_000_000 + Double(day) * 86400)) }
+check(PlanBackup.snapshots(in: bkDir).count == PlanBackup.keep, "30 instantanés gardés")
+check(FileManager.default.fileExists(atPath: bkDir.appendingPathComponent(PlanBackup.latestName).path), "plan-latest écrit")
+check(PlanBackup.snapshots(in: bkDir).first!.date > PlanBackup.snapshots(in: bkDir).last!.date, "instantanés triés du plus récent")
+check((try! Storage.decode(try! Data(contentsOf: bkDir.appendingPathComponent(PlanBackup.latestName)))).campaigns.first?.name == "B", "sauvegarde relisible")
+try? FileManager.default.removeItem(at: bkDir)
+check(VersionCompare.isNewer("v1.2.10", than: "1.2.9") && !VersionCompare.isNewer("1.0.0", than: "1.0") && VersionCompare.isNewer("1.1", than: "1.0.5"), "comparaison de versions")
+
 print(failures == 0 ? "OK : tous les tests passent" : "\(failures) échec(s)")
 exit(failures == 0 ? 0 : 1)

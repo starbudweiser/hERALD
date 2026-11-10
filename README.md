@@ -3,6 +3,10 @@
 **Communication campaign management for modders — hERALD never publishes anything itself.**  
 *Gestion de campagne de communication pour moddeurs — hERALD ne publie jamais rien lui-même.*
 
+## About
+
+**hERALD** is a free, open-source macOS app (MIT License) by starbudweiser, written with the help of Claude Code (Anthropic). It plans communication campaigns for modders: it prepares texts, tracks posts and outreach, and never publishes anything itself. Use *About hERALD* in the app menu for the version and credits. Updates are found automatically in this repository's releases (signature checked, installed only when nothing is running; can be switched off in Settings).
+
 🇬🇧 [English](#-english) · 🇫🇷 [Français](#-français)
 
 ---
@@ -30,6 +34,8 @@ Details, setup and tips: [docs/AI_AGENT.md](docs/AI_AGENT.md).
 - **Posts**: tracking and drafts in one list (filter by status and channel) with a tabbed inspector: Text (FR/EN/ES/IT, Copy), Numbers, Feedback, Notes; link after publishing and *Mark published*.
 - **Contacts (outreach)**: YouTubers, press, sites, Discord… with status, next follow-up, coverage link, message thread and a mail editor (first-contact and follow-up templates in the contact's language). *Send* goes through the mail client chosen in Settings: the **Mail app** (AppleScript: no password handled; send, read the replies of your contacts' addresses, move them to Mail's Trash) or **another client** (opens a ready-to-send message). Always on your click, after a confirmation. Plans from before the redesign are migrated once.
 - **Browser**: built-in web view (tabs, persistent cookies, no password autofill). Every link of the app opens there; ⌥-click or the button opens the Mac's browser.
+- **Automatic updates**: once a day hERALD looks for a newer release on GitHub, checks the Developer ID signature, replaces itself and relaunches (never while a reading or the AI agent is working). *Settings → Updates*: tick box and *Check for updates* button.
+- **iCloud backup of your plans**: a snapshot per day (30 kept) plus `plan-latest.herald` in *iCloud Drive › hERALD › Sauvegardes*, 20 s after each change. An empty plan is never saved. *Settings → iCloud backup*: on/off, *Back up now*, *Restore…* (the current plan is kept as `plan_avant_restauration.json`).
 - **Plan**: campaigns with an event date and countdown, dated milestones (teaser, D-day announcement, follow-up), posts per channel (Nexus, Reddit, Discord, YouTube, GitHub, X/Bluesky, Instagram, forums) with status *idea → draft → approved → published* and link. Month calendar and tracking table.
 - **Drafts** per post in French, English, Spanish and Italian, copied in one click.
 - **Monitoring**: watch GitHub releases and Nexus mod pages (read only, public APIs; the optional Nexus API key stays in the macOS keychain). Checked automatically once a week at launch; weekly report readable in the app and copyable as Markdown.
@@ -106,6 +112,8 @@ Détails, réglages et astuces : [docs/AGENT_IA.md](docs/AGENT_IA.md).
 - **Publications** : suivi et brouillons dans une seule liste (filtre par statut et canal) avec un inspecteur à onglets : Texte (FR/EN/ES/IT, Copier), Chiffres, Retours, Notes ; lien après publication et *Marquer publié*.
 - **Contacts (démarchage)** : youtubeurs, presse, sites, Discord… avec statut, prochaine relance, lien obtenu, fil des messages et éditeur de mail (modèles premier contact et relance dans la langue du contact). *Envoyer* passe par le client de messagerie choisi dans les Réglages : l'**app Mail** (AppleScript : aucun mot de passe manipulé ; envoi, lecture des réponses des adresses de vos contacts, mise à la corbeille de Mail) ou **un autre client** (ouvre un message prêt à envoyer). Toujours sur votre clic, après confirmation. Les plans d'avant la refonte sont migrés une fois.
 - **Navigateur** : vue web intégrée (onglets, cookies conservés, pas de saisie automatique de mots de passe). Tous les liens de l'appli s'y ouvrent ; ⌥-clic ou le bouton ouvre le navigateur du Mac.
+- **Mises à jour automatiques** : une fois par jour, hERALD cherche une version plus récente dans les releases GitHub, vérifie la signature Developer ID, se remplace et se relance (jamais pendant un relevé ou un travail de l'agent). *Réglages → Mises à jour* : case à cocher et bouton *Rechercher une mise à jour*.
+- **Sauvegarde iCloud des plans** : un instantané par jour (30 gardés) et `plan-latest.herald` dans *iCloud Drive › hERALD › Sauvegardes*, 20 s après chaque modification. Un plan vide n'est jamais sauvegardé. *Réglages → Sauvegarde iCloud* : activer, *Sauvegarder maintenant*, *Restaurer…* (le plan actuel est gardé dans `plan_avant_restauration.json`).
 - **Plan** : campagnes avec date d'événement et compte à rebours, jalons datés (teaser, annonce du Jour J, suivi), publications par canal avec statut *idée → brouillon → validé → publié* et lien. Calendrier du mois et tableau de suivi.
 - **Brouillons** par publication en français, anglais, espagnol et italien, copiés en un clic.
 - **Veille** : versions GitHub et pages de mods Nexus (lecture seule, API publiques ; la clé API Nexus facultative reste dans le trousseau macOS). Vérification automatique une fois par semaine au lancement ; rapport hebdomadaire lisible dans l'appli et copiable en Markdown.
