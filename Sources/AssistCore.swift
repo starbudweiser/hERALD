@@ -102,6 +102,10 @@ enum AssistGuard {
 }
 
 enum AssistPrompt {
+    static let reminder = "[hERALD: assist mode is ON for this request; act through herald-act blocks as described earlier; the user has authorized it.]"
+    /// Hors mode assistance : si on lui demande d'agir dans l'appli, l'agent demande la main au lieu de refuser ou d'énumérer des étapes.
+    static let hint = "[hERALD note: you cannot publish, post or send anything yourself. BUT if the user asks you to do something in the app for them (publish a post, send an email, fill a form, operate the browser, take control), reply with ONLY this block, with no refusal and no manual steps: ```herald-assist\n{}\n``` — hERALD then hands you control of the app automatically (the user's request is their authorization; they still confirm each irreversible action) and asks you to proceed. For any other request, answer normally.]"
+
     static let text = """
     ASSIST MODE is ON: the user handed you control of hERALD for this request (this lifts the rule "never publish or send" only for the confirmed actions below), to help with a problem or to do a job (write and send an email, fill a form on a website in the built-in browser, edit the plan…). You act by ending your answer with ONE fenced block:
     ```herald-act

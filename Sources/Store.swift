@@ -241,7 +241,9 @@ final class Store: ObservableObject {
     @Published var agentScopeTask = false
     var agentTasks: [AgentTarget: Task<Void, Never>] = [:]
     /// Mode assistance : l'agent a la main (actions dans l'appli), journal, confirmation en attente.
-    @Published var assistOn = false
+    @Published var assistOn = false { didSet { if !assistOn { assistPrimed = false } } }
+    /// Les consignes du mode assistance ont déjà été envoyées à l'agent depuis l'activation.
+    var assistPrimed = false
     @Published var assistLog: [AssistEntry] = []
     @Published var assistConfirm: AssistConfirm?
     /// L'agent a demandé la main (bloc herald-assist) : activé automatiquement, la demande de l'utilisateur vaut autorisation.

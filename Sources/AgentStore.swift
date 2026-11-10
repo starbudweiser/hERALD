@@ -72,8 +72,13 @@ extension Store {
         let shown = question.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !shown.isEmpty, !agentBusy.contains(t), let ci = data.campaigns.firstIndex(where: { $0.id == campaign.id }) else { return [] }
         var found: [AssistAction] = []
-        // en mode assistance, un rappel accompagne la demande (une session reprise pèse davantage ses anciens échanges que le prompt système)
-        let q = assistOn && !auto ? "[hERALD assist mode is ON for this request: act through herald-act blocks as described in the system prompt; the user has authorized it.]\n" + shown : shown
+        // Une session Claude Code reprise garde son prompt système d'origine : les consignes du mode assistance voyagent donc dans le message
+        // (le texte complet à l'activation, un rappel ensuite ; hors mode assistance, la consigne pour demander la main).
+        var pre = ""
+        if assistOn {
+            if !assistPrimed { pre = AssistPrompt.text + "\n\n"; assistPrimed = true } else if !auto { pre = AssistPrompt.reminder + "\n" }
+        } else if !auto { pre = AssistPrompt.hint + "\n" }
+        let q = pre + shown
         let cfg = AgentConfig.current
         agentBusy.insert(t); agentError[t] = nil; agentStart[t] = Date(); agentStatus[t] = L.t("agent.status.think")
         defer { agentBusy.remove(t); agentStatus[t] = nil; agentStart[t] = nil }
