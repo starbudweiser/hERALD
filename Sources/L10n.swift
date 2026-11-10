@@ -441,6 +441,14 @@ enum L {
         "mail.scan.unavailable": "La lecture des réponses demande l'app Mail (Réglages).",
         "mail.sent.other": "Message ouvert dans votre client : envoyez-le, puis marquez le contact comme contacté.",
         "mail.client.shortother": "Autre client",
+        "browser.back": "Précédent",
+        "browser.forward": "Suivant",
+        "browser.reload": "Recharger",
+        "browser.address": "Adresse ou recherche",
+        "browser.external": "Ouvrir dans le navigateur du Mac",
+        "browser.newtab": "Nouvel onglet",
+        "browser.closetab": "Fermer l'onglet",
+        "browser.empty": "Les liens des publications, contacts et canaux s'ouvrent ici. ⌥-clic : navigateur du Mac.",
     ]
 
     private static let en: [String: String] = [
@@ -864,6 +872,14 @@ enum L {
         "mail.scan.unavailable": "Reading replies needs the Mail app (Settings).",
         "mail.sent.other": "Message opened in your client: send it, then mark the contact as contacted.",
         "mail.client.shortother": "Other client",
+        "browser.back": "Back",
+        "browser.forward": "Forward",
+        "browser.reload": "Reload",
+        "browser.address": "Address or search",
+        "browser.external": "Open in the Mac's browser",
+        "browser.newtab": "New tab",
+        "browser.closetab": "Close tab",
+        "browser.empty": "Links from posts, contacts and channels open here. ⌥-click: the Mac's browser.",
     ]
 
     private static let es: [String: String] = [
@@ -1287,6 +1303,14 @@ enum L {
         "mail.scan.unavailable": "Leer respuestas requiere la app Mail (Ajustes).",
         "mail.sent.other": "Mensaje abierto en tu cliente: envíalo y marca el contacto como contactado.",
         "mail.client.shortother": "Otro cliente",
+        "browser.back": "Atrás",
+        "browser.forward": "Adelante",
+        "browser.reload": "Recargar",
+        "browser.address": "Dirección o búsqueda",
+        "browser.external": "Abrir en el navegador del Mac",
+        "browser.newtab": "Nueva pestaña",
+        "browser.closetab": "Cerrar pestaña",
+        "browser.empty": "Los enlaces de publicaciones, contactos y canales se abren aquí. ⌥-clic: navegador del Mac.",
     ]
 
     private static let it: [String: String] = [
@@ -1710,5 +1734,13 @@ enum L {
         "mail.scan.unavailable": "La lettura delle risposte richiede l'app Mail (Impostazioni).",
         "mail.sent.other": "Messaggio aperto nel tuo client: invialo, poi segna il contatto come contattato.",
         "mail.client.shortother": "Altro client",
+        "browser.back": "Indietro",
+        "browser.forward": "Avanti",
+        "browser.reload": "Ricarica",
+        "browser.address": "Indirizzo o ricerca",
+        "browser.external": "Apri nel browser del Mac",
+        "browser.newtab": "Nuova scheda",
+        "browser.closetab": "Chiudi scheda",
+        "browser.empty": "I link di pubblicazioni, contatti e canali si aprono qui. ⌥-clic: browser del Mac.",
     ]
 }

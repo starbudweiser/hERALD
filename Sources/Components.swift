@@ -214,9 +214,5 @@ struct CopyButton: View {
     }
 }
 
-/// Lien web ouvert dans le navigateur (lecture ou envoi manuel par l'utilisateur).
-func openURL(_ s: String) {
-    let t = s.trimmingCharacters(in: .whitespaces)
-    guard let u = URL(string: t.contains("://") ? t : "https://\(t)"), !t.isEmpty else { return }
-    NSWorkspace.shared.open(u)
-}
+/// Lien web : ouvert dans le navigateur intégré (⌥ enfoncé : navigateur du Mac).
+@MainActor func openURL(_ s: String) { Browser.open(s) }

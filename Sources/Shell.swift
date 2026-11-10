@@ -84,6 +84,7 @@ struct RootView: View {
             }
         }
         .background(Socle.C.bg)
+        .onAppear { BrowserModel.shared.reveal = { [weak ui] in ui?.tab = .browser; ui?.showSettings = false } }
         .sheet(isPresented: $ui.editingCampaign) { CampaignSheet().environmentObject(store) }
         .sheet(isPresented: $ui.showSettings) { SettingsView().environmentObject(store) }
         .sheet(isPresented: $store.welcome) { WelcomeView().environmentObject(store) }

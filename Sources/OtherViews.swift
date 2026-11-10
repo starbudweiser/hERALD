@@ -204,7 +204,7 @@ struct WatchDetail: View {
                 }
                 Spacer()
                 if let u = item.pageURL {
-                    Button(L.t("action.open")) { NSWorkspace.shared.open(u) }
+                    Button(L.t("action.open")) { Browser.openURL(u) }
                         .buttonStyle(SocleButtonStyle(.secondary, height: Socle.M.sizeControl)).fixedSize()
                 }
                 Button(L.t("action.remove")) { store.data.watch.removeAll { $0.id == item.id }; selected = nil }
