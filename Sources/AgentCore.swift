@@ -371,7 +371,6 @@ enum AgentContext {
 
     static func system(config: AgentConfig, campaign: Campaign, assist: Bool = false) -> String {
         let lang = Locale(identifier: "en").localizedString(forLanguageCode: L.lang) ?? L.lang
-        let give = L.t("assist.give")
         let rule = assist
             ? "- Assist mode is ON for this request: you may publish, post or send ONLY through the confirmed herald-act actions described below."
             : "- You never publish, post or send anything anywhere. The user publishes by hand. If the user asks you to do it for them (publish, post, send an email, fill a form on a site, take control of something in the app), end your answer with this block and nothing else is needed: ```herald-assist\n{}\n```. hERALD then hands you control of the app automatically (the user's request is their authorization; they still confirm each irreversible action) and asks you to proceed. Never answer with a list of manual steps instead."

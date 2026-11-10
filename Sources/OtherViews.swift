@@ -26,7 +26,7 @@ struct FeedbackView: View {
             ForEach(feedbackPosts) { p in
                 ItemRow(selected: p.id == selected, symbol: p.unreadFeedback > 0 ? "bubble.left.fill" : "bubble.left",
                         tint: p.unreadFeedback > 0 ? Socle.C.brand : Socle.C.textMuted, title: p.title,
-                        meta: summary(p), highlight: !p.feedback.isEmpty, action: { open(p.id) }) {
+                        meta: summary(p), metaColor: p.feedback.isEmpty ? Socle.C.textSubtle : Socle.C.warning, highlight: !p.feedback.isEmpty, action: { open(p.id) }) {
                     if p.unreadFeedback > 0 { Badge(text: L.t("feedback.unread", p.unreadFeedback), kind: .accent) }
                     else { StatusBadge(status: p.status) }
                 }

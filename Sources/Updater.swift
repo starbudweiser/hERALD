@@ -35,6 +35,7 @@ final class Updater: ObservableObject {
         isBusy = busy
         guard timer == nil else { return }
         let t = Timer(timeInterval: 600, repeats: true) { _ in Task { @MainActor in Updater.shared.tick(busy: Updater.shared.isBusy()) } }
+        t.tolerance = 120
         RunLoop.main.add(t, forMode: .common)
         timer = t
         tick(busy: busy())

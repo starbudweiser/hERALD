@@ -120,6 +120,14 @@ struct ItemRow<Trailing: View>: View {
     @ViewBuilder var trailing: Trailing
     @State private var hover = false
 
+    /// Bleu Socle : jamais de gris au survol.
+    private var pastel: Color { Socle.C.accent }
+    private var rowFill: Color {
+        if highlight { return pastel.opacity(selected ? 0.34 : hover ? 0.28 : 0.18) }
+        if selected { return Socle.C.surfaceSelected }
+        return hover ? pastel.opacity(0.10) : .clear
+    }
+
     var body: some View {
         Button(action: action) {
             HStack(spacing: Socle.M.space2_5) {
@@ -135,7 +143,7 @@ struct ItemRow<Trailing: View>: View {
             }
             .padding(.horizontal, Socle.M.space3)
             .frame(height: 46)
-            .background(selected ? Socle.C.surfaceSelected : hover ? Socle.C.surfaceHover : highlight ? Socle.C.brand.opacity(0.12) : .clear)
+            .background(rowFill)
             .overlay(alignment: .leading) { Rectangle().fill(selected ? Socle.C.brand : .clear).frame(width: 2) }
             .contentShape(Rectangle())
         }

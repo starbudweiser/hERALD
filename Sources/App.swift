@@ -20,7 +20,7 @@ struct HeraldApp: App {
                     await store.checkIfStale()
                 }
         }
-        .defaultSize(width: 1280, height: 800)
+        .defaultSize(width: 1724, height: 953)
         .commands {
             CommandGroup(replacing: .appInfo) {
                 Button(L.t("side.about", "hERALD")) { About.show() }
@@ -46,6 +46,7 @@ struct HeraldApp: App {
             CommandGroup(after: .windowArrangement) {
                 Button(L.t("menubar.hide")) { Presence.shared.hideToMenuBar() }
                     .keyboardShortcut("m", modifiers: [.command, .option])
+                Button(L.t("window.close.remember")) { WindowMemory.closeRemembering() }
             }
             CommandGroup(replacing: .importExport) {
                 Button(L.t("menu.export")) { store.exportPlan() }.keyboardShortcut("e")
@@ -120,6 +121,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         Socle.apply()
         Presence.shared.apply()
+        WindowMemory.install()
         // ⌥+ / ⌥− / ⌥0 quelle que soit la disposition du clavier (sur AZERTY, « + » demande Maj) et au pavé numérique.
         NSEvent.addLocalMonitorForEvents(matching: .keyDown) { e in
             let mods = e.modifierFlags.intersection([.command, .option, .control])
@@ -309,6 +311,14 @@ struct SettingsView: View {
                 .fixedSize(horizontal: false, vertical: true)
             Field(label: L.t("upd.title")) { UpdateSection() }
             Field(label: L.t("backup.title")) { BackupSection() }
+            Field(label: L.t("window.reset.title")) {
+                VStack(alignment: .leading, spacing: Socle.M.space1_5) {
+                    Button(L.t("window.reset")) { WindowMemory.reset() }
+                        .buttonStyle(SocleButtonStyle(.secondary, height: Socle.M.sizeControl)).fixedSize()
+                    Text(L.t("window.reset.note")).socle(Socle.T.meta).foregroundStyle(Socle.C.textSubtle)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
             Field(label: L.t("mail.client")) {
                 SocleSegmented(options: MailClient.allCases, selection: mailClient, label: { $0 == .mail ? "Mail" : L.t("mail.client.shortother") },
                                onSelect: { mailClient = $0 })

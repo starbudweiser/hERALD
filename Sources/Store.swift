@@ -268,6 +268,7 @@ final class Store: ObservableObject {
     func startStats() {
         guard statsTimer == nil else { return }
         let t = Timer(timeInterval: 600, repeats: true) { [weak self] _ in Task { @MainActor in await self?.refreshStatsIfDue() } }
+        t.tolerance = 120   // le système regroupe les réveils (économie d'énergie en arrière-plan)
         RunLoop.main.add(t, forMode: .common)
         statsTimer = t
         Task { await refreshStatsIfDue() }

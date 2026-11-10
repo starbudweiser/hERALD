@@ -500,6 +500,10 @@ enum L {
         "assist.settings.persistent": "Garder le mode actif tant que je ne le coupe pas (sinon : une seule demande)",
         "assist.settings.note": "Le bouton « Donner la main » du panneau de l'agent lui laisse piloter le navigateur, les mails, le plan et quelques réglages. Mots de passe, paiements et CAPTCHA restent toujours pour vous.",
         "assist.auto.on": "Mode assistance activé sur votre demande",
+        "window.close.remember": "Fermer en mémorisant la taille de la fenêtre",
+        "window.reset.title": "Taille de la fenêtre",
+        "window.reset": "Rétablir la taille par défaut",
+        "window.reset.note": "⇧ + clic sur la croix rouge mémorise la taille actuelle pour la prochaine ouverture.",
     ]
 
     private static let en: [String: String] = [
@@ -982,6 +986,10 @@ enum L {
         "assist.settings.persistent": "Keep the mode on until I turn it off (otherwise: one request only)",
         "assist.settings.note": "The “Take control” button in the agent panel lets it drive the browser, mail, the plan and a few settings. Passwords, payments and CAPTCHAs are always left to you.",
         "assist.auto.on": "Assist mode turned on at your request",
+        "window.close.remember": "Close and remember the window size",
+        "window.reset.title": "Window size",
+        "window.reset": "Reset to the default size",
+        "window.reset.note": "⇧ + click on the red close button remembers the current size for next launch.",
     ]
 
     private static let es: [String: String] = [
@@ -1464,6 +1472,10 @@ enum L {
         "assist.settings.persistent": "Mantener el modo activo hasta que lo desactive (si no: una sola petición)",
         "assist.settings.note": "El botón «Dar el control» del panel del agente le deja manejar el navegador, el correo, el plan y algunos ajustes. Contraseñas, pagos y CAPTCHA son siempre cosa tuya.",
         "assist.auto.on": "Modo asistencia activado a petición tuya",
+        "window.close.remember": "Cerrar recordando el tamaño de la ventana",
+        "window.reset.title": "Tamaño de la ventana",
+        "window.reset": "Restablecer el tamaño predeterminado",
+        "window.reset.note": "⇧ + clic en el botón rojo recuerda el tamaño actual para la próxima apertura.",
     ]
 
     private static let it: [String: String] = [
@@ -1946,5 +1958,9 @@ enum L {
         "assist.settings.persistent": "Mantieni la modalità attiva finché non la disattivo (altrimenti: una sola richiesta)",
         "assist.settings.note": "Il pulsante «Dai il controllo» nel pannello dell'agente gli lascia gestire browser, posta, piano e alcune impostazioni. Password, pagamenti e CAPTCHA restano sempre a te.",
         "assist.auto.on": "Modalità assistenza attivata su tua richiesta",
+        "window.close.remember": "Chiudi ricordando le dimensioni della finestra",
+        "window.reset.title": "Dimensioni della finestra",
+        "window.reset": "Ripristina le dimensioni predefinite",
+        "window.reset.note": "⇧ + clic sul pulsante rosso memorizza le dimensioni attuali per la prossima apertura.",
     ]
 }
