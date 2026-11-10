@@ -1,5 +1,7 @@
 # hERALD
 
+[![Listed on OpenMacApps](https://openmacapps.com/badge.svg)](https://openmacapps.com/apps/herald/)
+
 **Communication campaign management for modders — hERALD never publishes anything itself.**  
 *Gestion de campagne de communication pour moddeurs — hERALD ne publie jamais rien lui-même.*
 
