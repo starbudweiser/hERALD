@@ -90,8 +90,21 @@ final class Presence: NSObject {
         let ev = NSApp.currentEvent
         let wantsMenu = ev?.type == .rightMouseUp || ev?.modifierFlags.contains(.control) == true
         if wantsMenu {
-            let y = button.isFlipped ? button.bounds.maxY + 4 : -4
-            makeMenu().popUp(positioning: nil, at: NSPoint(x: 0, y: y), in: button)
+            // position calculée en coordonnées d'écran, à partir de la fenêtre de l'icône (celle de son écran, pas de l'écran actif)
+            if let w = button.window {
+                let r = w.convertToScreen(button.convert(button.bounds, to: nil))
+                var x = r.minX
+                if let sc = w.screen ?? NSScreen.screens.first(where: { $0.frame.intersects(r) }) {
+                    let menu = makeMenu()
+                    x = min(max(x, sc.frame.minX), sc.frame.maxX - menu.size.width - 4)
+                    menu.popUp(positioning: nil, at: NSPoint(x: x, y: r.minY - 4), in: nil)
+                    return
+                }
+                makeMenu().popUp(positioning: nil, at: NSPoint(x: x, y: r.minY - 4), in: nil)
+            } else {
+                let y = button.isFlipped ? button.bounds.maxY + 4 : -4
+                makeMenu().popUp(positioning: nil, at: NSPoint(x: 0, y: y), in: button)
+            }
         } else if let w = mainWindow, NSApp.isActive, !w.isMiniaturized {
             hideToMenuBar()      // fenêtre au premier plan : on la ferme (l'appli reste dans la barre de menus)
         } else {
