@@ -42,7 +42,7 @@ struct CalendarView: View {
                         HStack(spacing: 1) {
                             ForEach(0..<7, id: \.self) { c in
                                 DayCell(day: days[r * 7 + c], inMonth: cal.isDate(days[r * 7 + c], equalTo: month, toGranularity: .month),
-                                        open: { selectedPost = $0; tab = .tracking })
+                                        open: { selectedPost = $0; tab = .posts })
                                     .frame(maxWidth: .infinity)
                                     .frame(height: (g.size.height - CGFloat(rows - 1)) / CGFloat(rows))
                             }
@@ -77,13 +77,14 @@ struct CalendarView: View {
 
 struct DayCell: View {
     @EnvironmentObject var store: Store
+    @EnvironmentObject var ui: UIState
     let day: Date
     let inMonth: Bool
     let open: (UUID) -> Void
 
     var body: some View {
         let cal = Calendar.current
-        let posts = store.posts.filter { cal.isDate($0.date, inSameDayAs: day) }
+        let posts = store.posts.filter { cal.isDate($0.date, inSameDayAs: day) && ui.matches($0, store) }
         let milestones = store.campaign.milestones.filter { cal.isDate($0.date, inSameDayAs: day) }
         let isEvent = cal.isDate(store.campaign.eventDate, inSameDayAs: day)
         VStack(alignment: .leading, spacing: 3) {

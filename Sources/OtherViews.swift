@@ -83,6 +83,7 @@ struct DraftsView: View {
 
 struct FeedbackView: View {
     @EnvironmentObject var store: Store
+    @EnvironmentObject var ui: UIState
     @Binding var selected: UUID?
     @State private var kind: FeedbackKind = .comment
     @State private var value = 1
@@ -100,15 +101,12 @@ struct FeedbackView: View {
 
     var body: some View {
         SplitLayout {
-            ForEach(store.posts.sorted { ($0.status == .published ? 0 : 1, $0.date) < ($1.status == .published ? 0 : 1, $1.date) }) { p in
-                ListRow(selected: p.id == selected) { open(p.id) } content: {
-                    HStack(spacing: Socle.M.space1_5) {
-                        Text(p.title).socle(Socle.T.labelStrong).foregroundStyle(Socle.C.textStrong).lineLimit(1)
-                        Spacer(minLength: 0)
-                        if p.unreadFeedback > 0 { Badge(text: L.t("feedback.unread", p.unreadFeedback), kind: .accent) }
-                        StatusBadge(status: p.status)
-                    }
-                    Text(summary(p)).socle(Socle.T.meta).foregroundStyle(Socle.C.textSubtle).lineLimit(1)
+            ForEach(feedbackPosts) { p in
+                ItemRow(selected: p.id == selected, symbol: p.unreadFeedback > 0 ? "bubble.left.fill" : "bubble.left",
+                        tint: p.unreadFeedback > 0 ? Socle.C.brand : Socle.C.textMuted, title: p.title,
+                        meta: summary(p), action: { open(p.id) }) {
+                    if p.unreadFeedback > 0 { Badge(text: L.t("feedback.unread", p.unreadFeedback), kind: .accent) }
+                    else { StatusBadge(status: p.status) }
                 }
             }
         } detail: {
@@ -116,10 +114,14 @@ struct FeedbackView: View {
         }
     }
 
+    private var feedbackPosts: [Post] {
+        store.posts.filter { ui.matches($0, store) }
+            .sorted { ($0.status == .published ? 0 : 1, $0.date) < ($1.status == .published ? 0 : 1, $1.date) }
+    }
+
+    /// Une seule ligne : nombre de commentaires ou « aucun retour ».
     private func summary(_ p: Post) -> String {
-        guard !p.feedback.isEmpty else { return L.t("feedback.none") }
-        return FeedbackKind.allCases.filter { k in p.feedback.contains { $0.kind == k } }
-            .map { "\($0.label) \(L.number(p.total($0)))" }.joined(separator: " · ")
+        p.feedback.isEmpty ? L.t("feedback.none") : "\(FeedbackKind.comment.label) \(L.number(p.total(.comment)))"
     }
 
     private func detail(_ p: Post) -> some View {
@@ -154,6 +156,9 @@ struct FeedbackView: View {
                 Field(label: L.t("col.date")) {
                     DatePicker("", selection: $date, displayedComponents: .date).labelsHidden()
                 }.fixedSize()
+                Spacer(minLength: 0)
+            }
+            HStack(alignment: .bottom, spacing: Socle.M.space2) {
                 Field(label: L.t("feedback.text")) { TextField("", text: $text).socleField() }
                 Button(L.t("action.add")) {
                     var q = p
@@ -219,18 +224,16 @@ struct FeedbackView: View {
 
 struct WatchView: View {
     @EnvironmentObject var store: Store
+    @EnvironmentObject var ui: UIState
     @State private var selected: UUID?
     @State private var input = ""
     @State private var name = ""
     @State private var problem: String?
 
     var body: some View {
-        SplitLayout(width: 340) {
-            ListRow(selected: selected == nil) { selected = nil } content: {
-                Label(L.t("report.title"), systemImage: "doc.text").socle(Socle.T.labelStrong).foregroundStyle(Socle.C.textStrong)
-                Text(L.t("report.period", L.day(store.weekReport.start), L.day(store.weekReport.end)))
-                    .socle(Socle.T.meta).foregroundStyle(Socle.C.textSubtle)
-            }
+        SplitLayout {
+            ItemRow(selected: selected == nil, symbol: "doc.text", title: L.t("report.title"),
+                    meta: L.t("report.period", L.day(store.weekReport.start), L.day(store.weekReport.end))) { selected = nil }
             SectionBar(title: L.t("watch.title")) {
                 if store.checking { ProgressView().controlSize(.small) }
                 Button(L.t("watch.check")) { Task { await store.checkAll() } }
@@ -252,19 +255,11 @@ struct WatchView: View {
             }
             .padding(.horizontal, Socle.M.space3).padding(.bottom, Socle.M.space2)
             Divider().overlay(Socle.C.borderSubtle)
-            ForEach(store.data.watch) { w in
-                ListRow(selected: w.id == selected) { selected = w.id } content: {
-                    HStack(spacing: Socle.M.space1_5) {
-                        Text(w.name).socle(Socle.T.labelStrong).foregroundStyle(Socle.C.textStrong).lineLimit(1)
-                        Spacer(minLength: 0)
-                        Badge(text: w.kind.label)
-                    }
-                    HStack(spacing: Socle.M.space1_5) {
-                        Text(w.latest?.version ?? L.t("watch.unchecked")).socle(Socle.T.mono).foregroundStyle(Socle.C.accentText).lineLimit(1)
-                        Spacer(minLength: 0)
-                        if w.error != nil { Image(systemName: "exclamationmark.triangle").foregroundStyle(Socle.C.warning) }
-                    }
-                }
+            ForEach(store.data.watch.filter { ui.matches($0.name, $0.ref, $0.notes) }) { w in
+                ItemRow(selected: w.id == selected, symbol: w.error != nil ? "exclamationmark.triangle" : "shippingbox",
+                        tint: w.error != nil ? Socle.C.warning : Socle.C.textMuted, title: w.name,
+                        meta: w.latest?.version ?? L.t("watch.unchecked"), metaColor: Socle.C.accentText,
+                        action: { selected = w.id }) { Badge(text: w.kind.label) }
             }
         } detail: {
             if let id = selected, let w = store.data.watch.first(where: { $0.id == id }) { WatchDetail(item: w, selected: $selected) }
@@ -387,10 +382,11 @@ struct ReportView: View {
 
 struct ChannelsView: View {
     @EnvironmentObject var store: Store
+    @EnvironmentObject var ui: UIState
     @State private var selected: UUID?
 
     var body: some View {
-        SplitLayout(width: 320) {
+        SplitLayout {
             SectionBar(title: L.t("channels.title")) {
                 Button(L.t("action.add")) {
                     let c = Channel(name: L.t("channel.new"))
@@ -398,11 +394,9 @@ struct ChannelsView: View {
                 }
                 .buttonStyle(SocleButtonStyle(.secondary, height: Socle.M.sizeControl)).fixedSize()
             }
-            ForEach(store.data.channels) { c in
-                ListRow(selected: c.id == selected) { selected = c.id } content: {
-                    Label(c.name, systemImage: c.kind.symbol).socle(Socle.T.labelStrong).foregroundStyle(Socle.C.textStrong)
-                    Text(L.t("channel.uses", usage(c.id))).socle(Socle.T.meta).foregroundStyle(Socle.C.textSubtle)
-                }
+            ForEach(store.data.channels.filter { ui.matches($0.name, $0.url, $0.notes) }) { c in
+                ItemRow(selected: c.id == selected, symbol: c.kind.symbol, title: c.name,
+                        meta: L.t("channel.uses", usage(c.id)), action: { selected = c.id })
             }
         } detail: {
             if let id = selected, let i = store.data.channels.firstIndex(where: { $0.id == id }) { editor(i) }

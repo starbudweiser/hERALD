@@ -92,19 +92,62 @@ struct EmptyState: View {
     }
 }
 
-/// Liste à gauche, détail à droite, séparés par un filet.
+/// Liste à gauche, détail à droite : deux panneaux arrondis.
 struct SplitLayout<List: View, Detail: View>: View {
-    var width: CGFloat = 380
+    var width: CGFloat = 440
     @ViewBuilder var list: List
     @ViewBuilder var detail: Detail
     var body: some View {
-        HStack(spacing: 0) {
+        HStack(spacing: 12) {
             ScrollView { LazyVStack(spacing: 0) { list } }
                 .frame(width: width)
-                .background(Socle.C.surface)
-            Divider().overlay(Socle.C.border)
-            detail.frame(maxWidth: .infinity, maxHeight: .infinity).background(Socle.C.bg)
+                .soclePanel()
+            detail.frame(maxWidth: .infinity, maxHeight: .infinity).soclePanel()
         }
+    }
+}
+
+/// Ligne de liste de 46 px, sur une seule ligne : icône 26 px, titre (tronqué), méta à droite, badge d'état.
+struct ItemRow<Trailing: View>: View {
+    let selected: Bool
+    var symbol: String
+    var tint: Color = Socle.C.textMuted
+    let title: String
+    var meta: String = ""
+    var metaColor: Color = Socle.C.textSubtle
+    let action: () -> Void
+    @ViewBuilder var trailing: Trailing
+    @State private var hover = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: Socle.M.space2_5) {
+                Image(systemName: symbol).font(.system(size: 12)).foregroundStyle(tint)
+                    .frame(width: 26, height: 26).background(Socle.C.control, in: RoundedRectangle(cornerRadius: 6))
+                    .accessibilityHidden(true)
+                Text(title).socle(Socle.T.labelStrong).foregroundStyle(Socle.C.textStrong).lineLimit(1).truncationMode(.tail)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                if !meta.isEmpty {
+                    Text(meta).socle(Socle.T.meta).foregroundStyle(metaColor).lineLimit(1).fixedSize()
+                }
+                trailing.fixedSize()
+            }
+            .padding(.horizontal, Socle.M.space3)
+            .frame(height: 46)
+            .background(selected ? Socle.C.surfaceSelected : hover ? Socle.C.surfaceHover : .clear)
+            .overlay(alignment: .leading) { Rectangle().fill(selected ? Socle.C.brand : .clear).frame(width: 2) }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hover = $0 }
+        Divider().overlay(Socle.C.borderSubtle)
+    }
+}
+
+extension ItemRow where Trailing == EmptyView {
+    init(selected: Bool, symbol: String, tint: Color = Socle.C.textMuted, title: String, meta: String = "",
+         metaColor: Color = Socle.C.textSubtle, action: @escaping () -> Void) {
+        self.init(selected: selected, symbol: symbol, tint: tint, title: title, meta: meta, metaColor: metaColor, action: action) { EmptyView() }
     }
 }
 

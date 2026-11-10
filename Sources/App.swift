@@ -5,6 +5,7 @@ import SwiftUI
 struct HeraldApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var delegate
     @StateObject private var store = Store()
+    @StateObject private var ui = UIState()
     @AppStorage("zoom") private var zoom = 1.0
 
     var body: some Scene {
@@ -12,14 +13,21 @@ struct HeraldApp: App {
             ZoomedRoot(zoom: zoom)
                 .splashGated()
                 .environmentObject(store)
+                .environmentObject(ui)
                 .task { store.startInbox(); store.startStats(); await store.checkIfStale() }
         }
-        .defaultSize(width: 1320, height: 820)
+        .defaultSize(width: 1280, height: 800)
         .commands {
+            CommandGroup(replacing: .appSettings) {
+                Button(L.t("settings.title") + "…") { ui.showSettings = true }.keyboardShortcut(",")
+            }
             CommandGroup(replacing: .newItem) {
                 Button(L.t("campaign.add")) { store.addCampaign() }.keyboardShortcut("n")
-                Button(L.t("post.add")) { _ = store.addPost() }.keyboardShortcut("n", modifiers: [.command, .shift])
-                    .disabled(!store.hasCampaign)
+                Button(L.t("post.add")) { ui.selectedPost = store.addPost(); ui.tab = .posts }
+                    .keyboardShortcut("n", modifiers: [.command, .shift]).disabled(!store.hasCampaign)
+            }
+            CommandGroup(after: .textEditing) {
+                Button(L.t("search.placeholder")) { ui.focusSearch += 1 }.keyboardShortcut("f")
             }
             CommandGroup(after: .toolbar) {
                 Button(L.t("view.zoomin")) { setZoom(zoom + 0.1) }.keyboardShortcut("+", modifiers: .option)
@@ -32,8 +40,10 @@ struct HeraldApp: App {
             }
             CommandGroup(replacing: .importExport) {
                 Button(L.t("menu.export")) { store.exportPlan() }.keyboardShortcut("e")
-                Button(L.t("menu.import")) { _ = store.importPlan() }
+                Button(L.t("menu.import")) { ui.problem = store.importPlan() }
                 Button(L.t("menu.inbox")) { store.revealInbox() }
+                Divider()
+                Button(L.t("menu.sample")) { store.addSample() }
             }
         }
     }
@@ -66,9 +76,25 @@ struct ZoomedRoot: View {
             Presence.shared.refreshStats = { Task { await store.refreshStats() } }
         }
         // volet de l'agent ouvert : la fenêtre s'élargit d'autant plutôt que de rogner le contenu
-        .frame(minWidth: (store.agentOpen && AgentConfig.isEnabled(agentRaw) ? 1090 + panelWidth + 7 : 1120) * zoom, minHeight: 680 * zoom)
+        .frame(minWidth: (store.agentOpen && AgentConfig.isEnabled(agentRaw) ? 1180 + panelWidth + 7 : 1180) * zoom, minHeight: 720 * zoom)
         .background(Socle.C.bg)
+        .background(TitleBarCleaner())
     }
+}
+
+/// Barre de titre système sans titre ni filet : la fenêtre garde ses boutons, le contenu commence dessous.
+struct TitleBarCleaner: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSView {
+        let v = NSView()
+        DispatchQueue.main.async {
+            guard let w = v.window else { return }
+            w.titleVisibility = .hidden
+            w.titlebarAppearsTransparent = true
+            w.backgroundColor = NSColor(Socle.C.bg)
+        }
+        return v
+    }
+    func updateNSView(_ nsView: NSView, context: Context) {}
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -109,62 +135,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 }
 
-enum Tab: String, CaseIterable { case calendar, tracking, drafts, stats, feedback, watch, channels }
-
-struct RootView: View {
-    @EnvironmentObject var store: Store
-    @State private var tab: Tab = .calendar
-    @State private var editingCampaign = false
-    @State private var settings = false
-    @State private var selectedPost: UUID?
-    @AppStorage(AgentConfig.key) private var agentRaw = Data()
-
-    var body: some View {
-        HStack(spacing: 0) {
-            // volet de l'agent ouvert : la liste des campagnes s'efface (le nom reste dans l'en-tête) pour laisser la place
-            if !(store.agentOpen && AgentConfig.isEnabled(agentRaw)) {
-                CampaignSidebar(editing: $editingCampaign)
-                Divider().overlay(Socle.C.border)
-            }
-            VStack(spacing: 0) {
-                HeaderBar(editing: $editingCampaign, settings: $settings)
-                Divider().overlay(Socle.C.border)
-                GoldenRule()
-                TabsBar(tab: $tab)
-                Divider().overlay(Socle.C.border)
-                Group {
-                    if !store.hasCampaign && [.calendar, .tracking, .drafts, .stats, .feedback].contains(tab) {
-                        VStack(spacing: Socle.M.space3) {
-                            EmptyState(text: L.t("campaign.empty")).frame(maxHeight: 120)
-                            Button(L.t("campaign.add")) { store.addCampaign() }
-                                .buttonStyle(SocleButtonStyle(.primary)).fixedSize()
-                        }
-                    } else {
-                        switch tab {
-                        case .calendar: CalendarView(selectedPost: $selectedPost, tab: $tab)
-                        case .tracking: TrackingView(selected: $selectedPost)
-                        case .drafts: DraftsView(selected: $selectedPost)
-                        case .stats: StatsView(selectedPost: $selectedPost, tab: $tab)
-                        case .feedback: FeedbackView(selected: $selectedPost)
-                        case .watch: WatchView()
-                        case .channels: ChannelsView()
-                        }
-                    }
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            }
-            if store.agentOpen && AgentConfig.isEnabled(agentRaw) {
-                Divider().overlay(Socle.C.border)
-                AgentPanel(selectedPost: $selectedPost)
-            }
-        }
-        .background(Socle.C.bg)
-        .sheet(isPresented: $editingCampaign) { CampaignSheet().environmentObject(store) }
-        .sheet(isPresented: $settings) { SettingsView().environmentObject(store) }
-        .sheet(isPresented: $store.welcome) { WelcomeView().environmentObject(store) }
-    }
-}
-
 /// Premier lancement : exemple facultatif.
 struct WelcomeView: View {
     @EnvironmentObject var store: Store
@@ -187,65 +157,6 @@ struct WelcomeView: View {
     }
 }
 
-/// Rappel permanent de la règle d'or.
-struct GoldenRule: View {
-    var body: some View {
-        Callout(kind: .info, text: L.t("rule.banner"))
-            .padding(.horizontal, Socle.M.space3).padding(.vertical, Socle.M.space2)
-    }
-}
-
-// MARK: Campagnes
-
-struct CampaignSidebar: View {
-    @EnvironmentObject var store: Store
-    @Binding var editing: Bool
-    @State private var removing: Campaign?
-
-    var body: some View {
-        VStack(spacing: 0) {
-            SectionBar(title: L.t("campaigns.title")) {
-                Button { store.addCampaign() } label: { Image(systemName: "plus") }
-                    .buttonStyle(.plain).foregroundStyle(Socle.C.textMuted).help(L.t("campaign.add"))
-            }
-            .frame(minHeight: Socle.M.sizeBar + 8)
-            Divider().overlay(Socle.C.border)
-            ScrollView {
-                LazyVStack(spacing: 0) {
-                    ForEach(store.data.campaigns) { c in
-                        let current = c.id == store.campaign.id
-                        ListRow(selected: current) { store.select(c.id) } content: {
-                            Text(c.name).socle(Socle.T.labelStrong).lineLimit(2)
-                                .foregroundStyle(current ? Socle.C.warning : Socle.C.textStrong)
-                            HStack(spacing: Socle.M.space1_5) {
-                                Text(L.day(c.eventDate)).socle(Socle.T.meta).foregroundStyle(Socle.C.textSubtle)
-                                Spacer(minLength: 0)
-                                Countdown(days: store.daysLeft(c))
-                            }
-                            ProgressBar(value: progress(c))
-                        }
-                        .contextMenu {
-                            Button(L.t("campaign.edit")) { store.select(c.id); editing = true }
-                            Button(L.t("campaign.remove")) { removing = c }
-                        }
-                    }
-                }
-            }
-            Spacer(minLength: 0)
-        }
-        .frame(width: 240)
-        .background(Socle.C.surface)
-        .confirmationDialog(L.t("campaign.remove.confirm", removing?.name ?? ""),
-                            isPresented: Binding(get: { removing != nil }, set: { if !$0 { removing = nil } })) {
-            Button(L.t("campaign.remove"), role: .destructive) { if let c = removing { store.removeCampaign(c.id) } }
-        }
-    }
-
-    private func progress(_ c: Campaign) -> Double {
-        c.posts.isEmpty ? 0 : Double(c.posts.filter { $0.status == .published }.count) / Double(c.posts.count)
-    }
-}
-
 struct Countdown: View {
     let days: Int
     var body: some View {
@@ -265,89 +176,6 @@ struct ProgressBar: View {
             }
         }
         .frame(height: 4)
-    }
-}
-
-// MARK: En-tête
-
-struct HeaderBar: View {
-    @EnvironmentObject var store: Store
-    @Binding var editing: Bool
-    @Binding var settings: Bool
-    @State private var problem: String?
-    @AppStorage(AgentConfig.key) private var agentRaw = Data()
-
-    var body: some View {
-        HStack(spacing: Socle.M.space2) {
-            Text(branded: "hERALD").socle(Socle.T.title).foregroundStyle(Socle.C.textStrong)
-            Text(L.t("app.subtitle")).socle(Socle.T.body).foregroundStyle(Socle.C.textMuted).lineLimit(1)
-            if store.hasCampaign {
-                Text("·  \(store.campaign.name)").socle(Socle.T.body).foregroundStyle(Socle.C.textStrong).lineLimit(1)
-                Countdown(days: store.daysLeft(store.campaign))
-            }
-            Spacer(minLength: Socle.M.space4)
-            if let problem { Text(branded: problem).socle(Socle.T.meta).foregroundStyle(Socle.C.danger) }
-            if let notice = store.inboxNotice {
-                Button { store.inboxNotice = nil; settings = true } label: { Badge(text: notice, kind: .accent) }
-                    .buttonStyle(.plain).help(L.t("inbox.title"))
-            }
-            Menu {
-                Button(L.t("menu.export")) { store.exportPlan() }
-                Button(L.t("menu.import")) { problem = store.importPlan() }
-                Button(L.t("menu.inbox")) { store.revealInbox() }
-                Divider()
-                Button(L.t("menu.sample")) { store.addSample() }
-            } label: { Text(L.t("menu.plan")) }
-                .menuStyle(.borderlessButton).fixedSize()
-            if AgentConfig.isEnabled(agentRaw) {
-                Button(L.t("agent.button")) {
-                    store.agentOpen.toggle()
-                    if store.agentOpen { store.agentScopeTask = false }
-                }
-                .buttonStyle(SocleButtonStyle(store.agentOpen ? .primary : .secondary, height: Socle.M.sizeControl)).fixedSize()
-                .disabled(!store.hasCampaign)
-            }
-            Button(L.t("campaign.edit")) { editing = true }
-                .buttonStyle(SocleButtonStyle(.secondary, height: Socle.M.sizeControl)).fixedSize()
-                .disabled(!store.hasCampaign)
-            Button { settings = true } label: { Image(systemName: "gearshape") }
-                .buttonStyle(SocleButtonStyle(.secondary, height: Socle.M.sizeControl)).fixedSize()
-                .help(L.t("settings.title"))
-        }
-        .padding(.horizontal, Socle.M.space3)
-        .frame(minHeight: Socle.M.sizeBar + 8)
-        .background(Socle.C.surfaceRaised)
-    }
-}
-
-struct TabsBar: View {
-    @EnvironmentObject var store: Store
-    @Binding var tab: Tab
-
-    var body: some View {
-        HStack(spacing: Socle.M.space4) {
-            ForEach(Tab.allCases, id: \.self) { t in
-                Button { tab = t } label: {
-                    HStack(spacing: Socle.M.space1) {
-                        Text(L.t("tab.\(t.rawValue)")).socle(Socle.T.label)
-                        if t == .feedback, store.unreadFeedback > 0 {
-                            Text(L.number(store.unreadFeedback)).socle(Socle.T.caption).foregroundStyle(.white)
-                                .padding(.horizontal, 6).padding(.vertical, 1)
-                                .background(Socle.C.accent, in: Capsule())
-                                .help(L.t("feedback.unread", store.unreadFeedback))
-                        }
-                    }
-                        .foregroundStyle(tab == t ? Socle.C.textStrong : Socle.C.textMuted)
-                        .padding(.vertical, Socle.M.space2_5)
-                        .overlay(alignment: .bottom) { Rectangle().fill(tab == t ? Socle.C.accent : .clear).frame(height: 2) }
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-            }
-            Spacer()
-        }
-        .padding(.horizontal, Socle.M.space3)
-        .background(Socle.C.bg)
     }
 }
 

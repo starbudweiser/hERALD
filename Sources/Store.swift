@@ -13,7 +13,7 @@ final class Store: ObservableObject {
 
     /// Dernières lignes du journal de la boîte de dépôt, et résumé du dernier passage (effacé à la lecture).
     @Published var inboxLog = Inbox.readLog()
-    @Published var inboxNotice: String?
+    @Published var inboxFiles = 0
     private var inboxSource: DispatchSourceFileSystemObject?
 
     init() {
@@ -45,7 +45,7 @@ final class Store: ObservableObject {
             data = d
             inboxLog = Inbox.readLog()
             let files = lines.filter { !$0.contains("   ") }.count
-            inboxNotice = L.t("inbox.notice", files)
+            inboxFiles += files
         }
         // Fichiers encore en cours d'écriture : nouvel essai un peu plus tard.
         if !Inbox.pending().isEmpty {

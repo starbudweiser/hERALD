@@ -190,8 +190,10 @@ struct AppData: Codable {
 
 enum Storage {
     static let dir: URL = {
-        let d = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("hERALD", isDirectory: true)
+        // HERALD_DATA_DIR : dossier de données de remplacement (essais, sans toucher au plan réel).
+        let d = ProcessInfo.processInfo.environment["HERALD_DATA_DIR"].map { URL(fileURLWithPath: $0, isDirectory: true) }
+            ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+                .appendingPathComponent("hERALD", isDirectory: true)
         try? FileManager.default.createDirectory(at: d, withIntermediateDirectories: true)
         return d
     }()

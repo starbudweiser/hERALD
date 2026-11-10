@@ -274,7 +274,7 @@ struct StatsView: View {
     @ViewBuilder private func menu(_ p: Post) -> some View {
         Button(L.t("action.open")) { openURL(p.link) }.disabled(p.link.isEmpty)
         Button(L.t("stats.manual.add")) { entry = p.id }
-        Button(L.t("stats.showpost")) { selectedPost = p.id; tab = .tracking }
+        Button(L.t("stats.showpost")) { selectedPost = p.id; tab = .posts }
     }
 }
 
