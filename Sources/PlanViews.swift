@@ -100,7 +100,7 @@ struct DayCell: View {
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 2) {
                     ForEach(posts) { p in
-                        Button { open(p.id) } label: { PostChip(post: p) }.buttonStyle(.plain)
+                        Button { open(p.id) } label: { PostChip(post: p) }.buttonStyle(.plain).postDeleteMenu(p)
                     }
                 }
             }

@@ -37,6 +37,7 @@ struct PostsView: View {
                         title: p.title, meta: L.day(p.date), metaColor: late(p) ? Socle.C.danger : Socle.C.textSubtle,
                         action: { ui.selectedPost = p.id }) { StatusBadge(status: p.status) }
                     .opacity(p.status == .published && p.id != ui.selectedPost ? 0.6 : 1)
+                    .postDeleteMenu(p)
             }
         } detail: {
             if let id = ui.selectedPost, store.post(id) != nil { PostInspector(id: id, selected: $ui.selectedPost) }
@@ -237,4 +238,29 @@ struct PostInspector: View {
             }
         }
     }
+}
+
+/// Clic droit « Supprimer la publication » (avec confirmation) sur une ligne de liste ou une pastille du calendrier.
+private struct PostDeleteMenu: ViewModifier {
+    @EnvironmentObject var store: Store
+    @EnvironmentObject var ui: UIState
+    let post: Post
+    @State private var asking = false
+
+    func body(content: Content) -> some View {
+        content
+            .contextMenu {
+                Button(L.t("post.remove"), role: .destructive) { asking = true }
+            }
+            .confirmationDialog(L.t("post.remove.confirm", post.title), isPresented: $asking) {
+                Button(L.t("post.remove"), role: .destructive) {
+                    if ui.selectedPost == post.id { ui.selectedPost = nil }
+                    store.removePost(post.id)
+                }
+            }
+    }
+}
+
+extension View {
+    func postDeleteMenu(_ post: Post) -> some View { modifier(PostDeleteMenu(post: post)) }
 }

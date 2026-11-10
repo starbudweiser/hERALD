@@ -35,6 +35,7 @@ struct HeraldApp: App {
             }
             CommandGroup(after: .textEditing) {
                 Button(L.t("search.placeholder")) { ui.focusSearch += 1 }.keyboardShortcut("f")
+                Button(L.t("drawer.toggle")) { ui.toggleBrowser() }.keyboardShortcut("b")
                 Button(L.t("publish.open")) { ui.toggleWorkspace(store) }
                     .keyboardShortcut("b", modifiers: [.command, .shift]).disabled(!store.hasCampaign)
             }
@@ -325,6 +326,23 @@ struct SettingsView: View {
             }
             Text(L.t("settings.goatcounter.note")).socle(Socle.T.meta).foregroundStyle(Socle.C.textSubtle)
                 .fixedSize(horizontal: false, vertical: true)
+            Field(label: L.t("platform.settings.title")) {
+                VStack(alignment: .leading, spacing: Socle.M.space1_5) {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 140), alignment: .leading)], alignment: .leading, spacing: 4) {
+                        ForEach(StatPlatform.allCases.filter { $0 != .other && $0 != .nexusPage }) { p in
+                            Toggle(p.label, isOn: Binding(
+                                get: { store.pinnedPlatforms.contains(p) },
+                                set: { on in
+                                    var l = store.pinnedPlatforms.filter { $0 != p }
+                                    if on { l.append(p) }
+                                    store.data.platforms = l.map(\.rawValue)
+                                }))
+                        }
+                    }
+                    Text(L.t("platform.settings.note")).socle(Socle.T.meta).foregroundStyle(Socle.C.textSubtle)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
             Field(label: L.t("upd.title")) { UpdateSection() }
             Field(label: L.t("backup.title")) { BackupSection() }
             Field(label: L.t("window.reset.title")) {

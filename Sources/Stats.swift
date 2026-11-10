@@ -21,7 +21,7 @@ struct StatSnapshot: Codable, Hashable {
 
 /// Plateforme déduite du lien de la publication (sinon du type de canal).
 enum StatPlatform: String, CaseIterable, Identifiable, Codable {
-    case youtube, reddit, bluesky, github, nexus, nexusPage, site, instagram, facebook, discord, x, other
+    case youtube, vimeo, reddit, bluesky, github, nexus, nexusPage, site, instagram, facebook, discord, x, other
     var id: String { rawValue }
     var label: String { L.t("stats.platform.\(rawValue)") }
     /// Relevé automatique possible (les autres se saisissent à la main).
@@ -29,6 +29,7 @@ enum StatPlatform: String, CaseIterable, Identifiable, Codable {
     var symbol: String {
         switch self {
         case .youtube: "play.rectangle"
+        case .vimeo: "play.circle"
         case .reddit: "bubble.left.and.bubble.right"
         case .bluesky, .x: "at"
         case .github: "chevron.left.forwardslash.chevron.right"
@@ -46,6 +47,7 @@ enum StatPlatform: String, CaseIterable, Identifiable, Codable {
         if let host = URL(string: t.contains("://") ? t : "https://\(t)")?.host?.lowercased(), !t.isEmpty {
             let h = host.hasPrefix("www.") ? String(host.dropFirst(4)) : host
             if h.hasSuffix("youtube.com") || h == "youtu.be" { return .youtube }
+            if h.hasSuffix("vimeo.com") { return .vimeo }
             if h.hasSuffix("reddit.com") || h == "redd.it" { return .reddit }
             if h == "bsky.app" { return .bluesky }
             if h == "github.com" { return .github }

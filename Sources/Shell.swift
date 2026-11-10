@@ -3,7 +3,7 @@ import SwiftUI
 
 /// Entrées de la barre latérale qui ouvrent une vue.
 enum Tab: String, CaseIterable {
-    case today, calendar, posts, contacts, stats, feedback, watch, oma, channels, browser
+    case today, calendar, posts, contacts, stats, feedback, watch, oma, channels, browser, platform
 
     var symbol: String {
         switch self {
@@ -17,25 +17,38 @@ enum Tab: String, CaseIterable {
         case .oma: "storefront"
         case .channels: "megaphone"
         case .browser: "globe"
+        case .platform: "megaphone"
         }
     }
     var title: String { L.t("tab.\(rawValue)") }
     /// Vues qui montrent la campagne choisie (les autres fonctionnent sans campagne).
-    var needsCampaign: Bool { [.today, .calendar, .posts, .contacts, .stats, .feedback].contains(self) }
+    var needsCampaign: Bool { [.today, .calendar, .posts, .contacts, .stats, .feedback, .platform].contains(self) }
 }
 
 /// État de l'interface (vue affichée, sélections, recherche, fenêtres) ; rien ici n'est enregistré dans le plan.
 @MainActor
 final class UIState: ObservableObject {
     /// HERALD_TAB : vue d'ouverture pour les essais (ex. « oma »).
-    @Published var tab: Tab = Tab(rawValue: ProcessInfo.processInfo.environment["HERALD_TAB"] ?? "") ?? .today { didSet { if tab != oldValue { query = ""; workspace = nil } } }
+    @Published var tab: Tab = Tab(rawValue: ProcessInfo.processInfo.environment["HERALD_TAB"] ?? "") ?? .today { didSet { if tab != oldValue { query = ""; workspace = nil; if tab == .browser { browserOpen = false } } } }
     /// Espace de publication ouvert (navigateur + panneau), ou nil.
     @Published var workspace: Workspace?
     @Published var selectedPost: UUID?
+    /// Plateforme affichée quand la vue « plateforme » est ouverte.
+    @Published var platform: StatPlatform = StatPlatform(rawValue: ProcessInfo.processInfo.environment["HERALD_PLATFORM"] ?? "") ?? .youtube
+    @Published var addingPlatform = false
     @Published var selectedContact: UUID?
     @Published var query = ""
     @Published var focusSearch = 0
     @Published var showSettings = false
+    /// Tiroir navigateur (⌘B) : ouvert, et agrandi sur toute la largeur hors panneau IA.
+    @Published var browserOpen = ProcessInfo.processInfo.environment["HERALD_DRAWER"] != nil
+    @Published var browserFull = false
+    func setBrowser(_ on: Bool) {
+        if on && tab == .browser { return }
+        if on && BrowserModel.shared.tabs.isEmpty { BrowserModel.shared.newTab() }
+        withAnimation(on ? DrawerMotion.open : DrawerMotion.close) { browserOpen = on }
+    }
+    func toggleBrowser() { setBrowser(!browserOpen) }
     @Published var editingCampaign = false
     @Published var problem: String?
 
@@ -71,30 +84,46 @@ struct RootView: View {
     @EnvironmentObject var store: Store
     @EnvironmentObject var ui: UIState
     @AppStorage(AgentConfig.key) private var agentRaw = Data()
+    @State private var sidebarW: CGFloat = 0
 
     var body: some View {
         HStack(spacing: 0) {
-            Sidebar().padding(.leading, 12).padding(.vertical, 12)
-            VStack(spacing: 12) {
-                if store.assistOn { AssistBanner() }
-                if ui.workspace == nil { ViewHeader(spec: spec(ui.tab)) }
-                content.frame(maxWidth: .infinity, maxHeight: .infinity)
-                StatusBar()
+            ZStack(alignment: .bottom) {
+                HStack(spacing: 0) {
+                    Sidebar().padding(.leading, 12).padding(.vertical, 12).reportWidth($sidebarW)
+                    VStack(spacing: 12) {
+                        if store.assistOn { AssistBanner() }
+                        if ui.workspace == nil { ViewHeader(spec: spec(ui.tab)) }
+                        content.frame(maxWidth: .infinity, maxHeight: .infinity)
+                        StatusBar()
+                    }
+                    .padding(12)
+                }
+                if ui.browserOpen {
+                    BrowserDrawer()
+                        .padding(.top, 36)
+                        .padding(.leading, ui.browserFull ? 0 : sidebarW)
+                        .transition(.move(edge: .bottom))
+                        .zIndex(1)
+                } else if ui.tab != .browser && ui.workspace == nil {
+                    BrowserDrawerTab().padding(.leading, sidebarW).transition(.opacity)
+                }
             }
-            .padding(12)
             if store.agentOpen && AgentConfig.isEnabled(agentRaw) {
                 Divider().overlay(Socle.C.border)
                 AgentPanel(selectedPost: $ui.selectedPost)
             }
         }
+        .animation(DrawerMotion.resize, value: store.agentOpen)
         .background(Socle.C.bg)
         .onAppear { AssistExecutor.install(store: store, ui: ui) }
         .alert(store.assistConfirm?.title ?? "", isPresented: Binding(get: { store.assistConfirm != nil }, set: { _ in }), presenting: store.assistConfirm) { c in
             Button(L.t("assist.allow")) { c.resolve(true) }
             Button(L.t("assist.deny"), role: .cancel) { c.resolve(false) }
         } message: { c in Text(c.detail) }
-        .onAppear { BrowserModel.shared.reveal = { [weak ui] in if ui?.workspace == nil { ui?.tab = .browser }; ui?.showSettings = false } }
+        .onAppear { BrowserModel.shared.reveal = { [weak ui] in if ui?.workspace == nil { ui?.setBrowser(true) }; ui?.showSettings = false } }
         .sheet(isPresented: $ui.editingCampaign) { CampaignSheet().environmentObject(store) }
+        .sheet(isPresented: $ui.addingPlatform) { AddPlatformSheet().environmentObject(store).environmentObject(ui) }
         .sheet(isPresented: $ui.showSettings) { SettingsView().environmentObject(store) }
         .sheet(isPresented: $store.welcome) { WelcomeView().environmentObject(store) }
         .alert(L.t("import.invalid.title"), isPresented: Binding(get: { ui.problem != nil }, set: { if !$0 { ui.problem = nil } })) {
@@ -124,6 +153,7 @@ struct RootView: View {
             case .oma: OMAView()
             case .channels: ChannelsView()
             case .browser: BrowserView().soclePanel()
+            case .platform: PlatformView(platform: ui.platform)
             }
         }
     }
@@ -139,6 +169,8 @@ struct RootView: View {
                               primary: store.hasCampaign ? (L.t("contact.add"), { ui.selectedContact = store.addContact() }) : nil)
         case .feedback, .watch, .oma, .channels:
             return HeaderSpec(title: title, subtitle: sub, searchable: true, primary: nil)
+        case .platform:
+            return HeaderSpec(title: ui.platform.label, subtitle: sub, searchable: true, primary: nil)
         case .stats, .browser:
             return HeaderSpec(title: title, subtitle: sub, searchable: false, primary: nil)
         }
@@ -210,7 +242,8 @@ struct Sidebar: View {
                 VStack(alignment: .leading, spacing: 2) {
                     group("side.group.campaign", [.today, .calendar, .posts])
                     group("side.group.outreach", [.contacts])
-                    group("side.group.results", [.stats, .feedback, .watch, .oma])
+                    group("side.group.results", [.stats, .feedback, .watch])
+                    groupPlatforms
                     groupTools
                 }
                 .padding(.horizontal, 8)
@@ -246,6 +279,25 @@ struct Sidebar: View {
             ForEach(tabs, id: \.self) { t in
                 SidebarRow(symbol: t.symbol, title: t.title, count: count(t), selected: ui.tab == t && !(store.agentOpen && agentOn),
                            key: shortcut(t.rawValue)) { ui.tab = t }
+            }
+        }
+    }
+
+    /// Une entrée par plateforme réglée ou utilisée dans le plan, plus OpenMacApps.
+    private var groupPlatforms: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            title("side.group.platforms")
+            SidebarRow(symbol: "plus.circle", title: L.t("platform.add"), count: 0, selected: false) { ui.addingPlatform = true }
+            ForEach(store.activePlatforms) { p in
+                SidebarRow(symbol: p.symbol, title: p.label, count: 0, selected: ui.tab == .platform && ui.platform == p && !(store.agentOpen && agentOn)) {
+                    ui.platform = p; ui.tab = .platform
+                }
+            }
+            SidebarRow(symbol: Tab.oma.symbol, title: Tab.oma.title, count: 0, selected: ui.tab == .oma && !(store.agentOpen && agentOn),
+                       key: shortcut("oma")) { ui.tab = .oma }
+            if store.activePlatforms.isEmpty {
+                Text(L.t("platform.hint")).socle(Socle.T.meta).foregroundStyle(Socle.C.textSubtle)
+                    .fixedSize(horizontal: false, vertical: true).padding(.horizontal, 8).padding(.vertical, 4)
             }
         }
     }

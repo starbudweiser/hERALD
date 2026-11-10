@@ -263,6 +263,8 @@ struct AppData: Codable {
     var statsChecked: Date?
     /// Suivi des fiches OpenMacApps (facultatif : anciens plans).
     var oma: OMAState?
+    /// Plateformes épinglées dans la barre latérale (identifiants StatPlatform) ; absent : aucune.
+    var platforms: [String]?
 }
 
 enum Storage {

@@ -6,6 +6,7 @@ extension StatPlatform {
     var color: Color {
         switch self {
         case .youtube: Color(red: 0.94, green: 0.27, blue: 0.27)
+        case .vimeo: Color(red: 0.10, green: 0.72, blue: 0.92)
         case .reddit: Color(red: 0.98, green: 0.45, blue: 0.09)
         case .bluesky: Color(red: 0.22, green: 0.60, blue: 0.96)
         case .github: Socle.C.textMuted
