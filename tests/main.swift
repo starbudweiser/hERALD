@@ -352,5 +352,23 @@ check((try! Storage.decode(try! Data(contentsOf: bkDir.appendingPathComponent(Pl
 try? FileManager.default.removeItem(at: bkDir)
 check(VersionCompare.isNewer("v1.2.10", than: "1.2.9") && !VersionCompare.isNewer("1.0.0", than: "1.0") && VersionCompare.isNewer("1.1", than: "1.0.5"), "comparaison de versions")
 
+// Mode assistance : lecture des actions, garde-fous, modifications du plan
+let acts = AssistParse.extract("Je m'en occupe.\n```herald-act\n[{\"do\":\"browser_open\",\"url\":\"https://bsky.app\"},{\"do\":\"browser_read\"}]\n```")
+check(acts.actions.count == 2 && acts.actions[0].kind == "browser_open" && acts.actions[0].str("url") == "https://bsky.app" && acts.clean == "Je m'en occupe.", "blocs herald-act lus")
+check(AssistParse.extract("rien à faire").actions.isEmpty, "aucune action")
+check(AssistGuard.isIrreversible("Envoyer") && AssistGuard.isIrreversible("Post") && !AssistGuard.isIrreversible("Suivant"), "actions irréversibles reconnues")
+check(AssistGuard.isForbidden("Payer maintenant") && AssistGuard.isForbidden("I'm not a robot") && !AssistGuard.isForbidden("Répondre"), "paiement et CAPTCHA refusés")
+check(AssistGuard.isSensitiveField(type: "password", autocomplete: "", name: "") && AssistGuard.isSensitiveField(type: "text", autocomplete: "cc-number", name: "") && !AssistGuard.isSensitiveField(type: "text", autocomplete: "email", name: "subject"), "champs sensibles")
+MainActor.assumeIsolated {
+let st = Store(); st.addCampaign()
+check(st.assistPlanPost(AssistAction(kind: "plan_post", args: ["title": "Test agent", "status": "published"])).hasPrefix("refused"), "l'agent ne marque jamais publié")
+let r1 = st.assistPlanPost(AssistAction(kind: "plan_post", args: ["title": "Test agent", "notes": "n", "drafts": ["fr": "Bonjour"], "date": "2026-11-12"]))
+check(r1.hasPrefix("ok: post created") && st.campaign.posts.contains { $0.title == "Test agent" && $0.draft(.fr) == "Bonjour" }, "publication créée par l'agent")
+let r2 = st.assistPlanContact(AssistAction(kind: "plan_contact", args: ["name": "Alice", "email": "a@b.fr", "kind": "press"]))
+check(r2.hasPrefix("ok: contact created") && st.contacts.first?.email == "a@b.fr", "contact créé par l'agent")
+check(st.assistMailDraft(AssistAction(kind: "mail_draft", args: ["contact": "alice", "subject": "S", "body": "B"])).hasPrefix("ok: draft") && st.contact(st.contacts[0].id)?.messages.first?.to == "a@b.fr", "brouillon de mail écrit")
+check(st.assistSetting(AssistAction(kind: "setting", args: ["key": "agentConfig", "value": "x"])).hasPrefix("error"), "réglage non autorisé refusé")
+}
+
 print(failures == 0 ? "OK : tous les tests passent" : "\(failures) échec(s)")
 exit(failures == 0 ? 0 : 1)

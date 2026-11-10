@@ -74,6 +74,7 @@ struct RootView: View {
         HStack(spacing: 0) {
             Sidebar().padding(.leading, 12).padding(.vertical, 12)
             VStack(spacing: 12) {
+                if store.assistOn { AssistBanner() }
                 if ui.workspace == nil { ViewHeader(spec: spec(ui.tab)) }
                 content.frame(maxWidth: .infinity, maxHeight: .infinity)
                 StatusBar()
@@ -85,6 +86,11 @@ struct RootView: View {
             }
         }
         .background(Socle.C.bg)
+        .onAppear { AssistExecutor.install(store: store, ui: ui) }
+        .alert(store.assistConfirm?.title ?? "", isPresented: Binding(get: { store.assistConfirm != nil }, set: { _ in }), presenting: store.assistConfirm) { c in
+            Button(L.t("assist.allow")) { c.resolve(true) }
+            Button(L.t("assist.deny"), role: .cancel) { c.resolve(false) }
+        } message: { c in Text(c.detail) }
         .onAppear { BrowserModel.shared.reveal = { [weak ui] in if ui?.workspace == nil { ui?.tab = .browser }; ui?.showSettings = false } }
         .sheet(isPresented: $ui.editingCampaign) { CampaignSheet().environmentObject(store) }
         .sheet(isPresented: $ui.showSettings) { SettingsView().environmentObject(store) }
@@ -406,5 +412,24 @@ struct StatusBar: View {
         guard let last = store.data.statsChecked else { return L.t("status.stats.none") }
         let next = last.addingTimeInterval(store.campaignActive ? 3600 : 86400)
         return L.t("status.stats", L.stamp(last), L.stamp(max(next, Date())))
+    }
+}
+
+
+/// Bandeau visible dans toutes les vues tant que l'agent a la main.
+struct AssistBanner: View {
+    @EnvironmentObject var store: Store
+    var body: some View {
+        HStack(spacing: Socle.M.space2) {
+            Image(systemName: "hand.raised.fill").foregroundStyle(Socle.C.brand).accessibilityHidden(true)
+            Text(L.t("assist.active")).socle(Socle.T.labelStrong).foregroundStyle(Socle.C.textStrong).lineLimit(1)
+            if !store.agentBusy.isEmpty { ProgressView().controlSize(.small) }
+            Spacer(minLength: 0)
+            Button(L.t("assist.stop")) { store.assistStop() }
+                .buttonStyle(SocleButtonStyle(.secondary, height: Socle.M.sizeControl)).fixedSize()
+        }
+        .padding(.horizontal, Socle.M.space3).frame(height: 40)
+        .background(Socle.C.brand.opacity(0.14), in: RoundedRectangle(cornerRadius: 10))
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Socle.C.brand, lineWidth: 1))
     }
 }

@@ -184,6 +184,8 @@ struct AgentMessage: Codable, Identifiable, Hashable {
     var undo: [AgentUndo]?
     var dismissed: Bool?
     var usage: AgentUsage?
+    /// Message envoyé par hERALD lui-même (résultats des actions du mode assistance).
+    var auto: Bool?
 }
 
 extension Campaign {
@@ -367,7 +369,7 @@ enum AgentContext {
         return String(h, radix: 16)
     }
 
-    static func system(config: AgentConfig, campaign: Campaign) -> String {
+    static func system(config: AgentConfig, campaign: Campaign, assist: Bool = false) -> String {
         let lang = Locale(identifier: "en").localizedString(forLanguageCode: L.lang) ?? L.lang
         var s = """
         You are the assistant of the app hERALD, which manages communication campaigns. This session ("\(config.sessionName)") receives every request made from hERALD, for any campaign or task. The current campaign is "\(campaign.name)".
@@ -392,6 +394,7 @@ enum AgentContext {
             s += "\n\nThis session's id is \(config.sessionID); the user resumes it with: cd \"\(config.workURL.path)\" && claude --resume \(config.sessionID)"
         }
         if !campaign.agentBrief.isEmpty { s += "\n\nCampaign instructions from the user:\n\(campaign.agentBrief)" }
+        if assist { s += "\n\n" + AssistPrompt.text }
         return s
     }
 

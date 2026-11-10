@@ -30,32 +30,57 @@ extension Store {
     /// Lance une demande en arrière-plan (interruptible avec `cancelAgent`).
     func startAgent(_ t: AgentTarget, _ question: String) {
         guard !agentBusy.contains(t) else { return }
-        agentTasks[t] = Task { await self.askAgent(t, question); self.agentTasks[t] = nil }
+        agentTasks[t] = Task {
+            var actions = await self.askAgent(t, question)
+            var rounds = 0
+            // mode assistance : on exécute les actions de l'agent, puis on lui renvoie les résultats, jusqu'à la fin du travail
+            while self.assistOn, !actions.isEmpty, rounds < AssistMode.maxRounds, !Task.isCancelled, let run = self.assistExecutor {
+                rounds += 1
+                var results: [String] = []
+                for a in actions.prefix(AssistMode.maxPerRound) {
+                    if Task.isCancelled { break }
+                    results.append("\(a.kind): " + (await run(a)))
+                }
+                guard !Task.isCancelled else { break }
+                actions = await self.askAgent(t, "[hERALD action results]\n" + results.joined(separator: "\n"), auto: true)
+            }
+            if !AssistMode.persistent { self.assistOn = false }
+            self.agentTasks[t] = nil
+        }
+    }
+
+    /// Reprend la main : arrête l'agent, refuse la confirmation en attente et coupe le mode assistance.
+    func assistStop() {
+        assistOn = false
+        assistConfirm?.resolve(false); assistConfirm = nil
+        for t in agentTasks.values { t.cancel() }
     }
 
     func cancelAgent(_ t: AgentTarget) { agentTasks[t]?.cancel() }
 
     /// Envoie une demande. Toutes les demandes partent dans la même session de l'agent ; le contexte (campagne, tâche)
     /// accompagne le message quand il est nouveau ou modifié, pour que l'agent retrouve la tâche concernée.
-    func askAgent(_ t: AgentTarget, _ question: String) async {
+    @discardableResult
+    func askAgent(_ t: AgentTarget, _ question: String, auto: Bool = false) async -> [AssistAction] {
         let q = question.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !q.isEmpty, !agentBusy.contains(t), let ci = data.campaigns.firstIndex(where: { $0.id == campaign.id }) else { return }
+        guard !q.isEmpty, !agentBusy.contains(t), let ci = data.campaigns.firstIndex(where: { $0.id == campaign.id }) else { return [] }
+        var found: [AssistAction] = []
         let cfg = AgentConfig.current
         agentBusy.insert(t); agentError[t] = nil; agentStart[t] = Date(); agentStatus[t] = L.t("agent.status.think")
         defer { agentBusy.remove(t); agentStatus[t] = nil; agentStart[t] = nil }
         let progress: @Sendable (String) -> Void = { [weak self] s in Task { @MainActor in self?.agentStatus[t] = s } }
         let before = agentThread(t)
-        mutateThread(t, ci) { $0.messages.append(AgentMessage(role: .user, text: q)) }
+        mutateThread(t, ci) { $0.messages.append(AgentMessage(role: .user, text: q, auto: auto ? true : nil)) }
 
         let camp = data.campaigns[ci]
         let chan: (UUID?) -> String = { [unowned self] in channel($0)?.name ?? "—" }
-        let campBlock = AgentContext.campaignBlock(camp, config: cfg, channel: chan)
+        let campBlock = AgentContext.campaignBlock(camp, config: cfg, channel: chan) + (assistOn ? AssistPrompt.contactsBlock(camp) : "")
         var postBlock = ""
         if case .post(let id) = t, let p = camp.posts.first(where: { $0.id == id }) {
             postBlock = AgentContext.postBlock(p, in: camp, config: cfg, channel: chan)
         }
         let campHash = AgentContext.hash(campBlock), postHash = postBlock.isEmpty ? nil : AgentContext.hash(postBlock)
-        let system = AgentContext.system(config: cfg, campaign: camp)
+        let system = AgentContext.system(config: cfg, campaign: camp, assist: assistOn)
         do {
             var reply: String
             var usage: AgentUsage?
@@ -77,6 +102,9 @@ extension Store {
                                                      user: AgentContext.message(question: q, context: campBlock + "\n" + postBlock))
                 reply = r.text; usage = r.usage
             }
+            let acts = AssistParse.extract(reply)
+            reply = acts.clean
+            if assistOn { found = acts.actions }
             let parsed = AgentParse.sessions(reply)
             reply = parsed.clean
             mutateThread(t, ci) { th in
@@ -91,6 +119,7 @@ extension Store {
         } catch {
             agentError[t] = Task.isCancelled ? L.t("agent.cancelled") : error.localizedDescription
         }
+        return found
     }
 
     /// Rattache une sous-session annoncée par l'agent à la tâche qu'elle traite (sinon à la discussion en cours).

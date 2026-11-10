@@ -32,6 +32,16 @@ Turn it on in **Settings → AI agent (optional)**, then **Set up the agent…**
 
 If the working folder is on an external disk, macOS asks once: *"hERALD would like to access files on a removable volume"*. Click **Allow**. The **Test the agent** button in the settings checks the program and the folder access without asking the agent anything, and is the right moment to answer macOS. If access is refused, hERALD explains it and says where to allow it (System Settings, Privacy & Security, Files & Folders, hERALD, Removable Volumes).
 
+## Assist mode ("Take control")
+
+For a technical problem or something you don't understand, the **Take control** button in the agent panel hands the app to the agent for one request (or until you turn it off: agent settings → *Assist mode*). It can then drive the built-in browser (open pages, read them, click, fill fields), write and send emails through your mail client, read replies, edit publications and contacts, and change a few settings (mail client, iCloud backup, auto-update).
+
+- **A banner is shown in every view** while the agent is in control, with **Take back control** (stops everything at once) and an action log in the panel.
+- **Default: everything except the irreversible.** Clicks that send, post, validate or delete, and every email, ask for your confirmation (Allow / Refuse). *Full autonomy* (agent settings) removes those confirmations.
+- **Always for you, in every mode**: passwords, card numbers, one-time codes, payments and CAPTCHAs are refused; the agent tells you to do them yourself in the browser. It can never mark a post "Published".
+- **Web pages and received emails are untrusted data**: the agent is told never to follow instructions found in them.
+- Works with Claude Code, a command agent or an API: the agent writes `herald-act` blocks, hERALD runs them (at most 6 per round, 25 rounds) and sends the results back.
+
 ## Other agents
 
 | Agent | How | Conversation memory |

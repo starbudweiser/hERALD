@@ -240,6 +240,12 @@ final class Store: ObservableObject {
     @Published var agentOpen = false
     @Published var agentScopeTask = false
     var agentTasks: [AgentTarget: Task<Void, Never>] = [:]
+    /// Mode assistance : l'agent a la main (actions dans l'appli), journal, confirmation en attente.
+    @Published var assistOn = false
+    @Published var assistLog: [AssistEntry] = []
+    @Published var assistConfirm: AssistConfirm?
+    /// Exécuteur des actions (fourni par l'interface ; absent dans les tests).
+    var assistExecutor: (@MainActor (AssistAction) async -> String)?
     private var statsTimer: Timer?
 
     /// Domaine du site (pour reconnaître ses pages dans les liens) et code GoatCounter.

@@ -205,7 +205,13 @@ struct AgentPanel: View {
                         .padding(.horizontal, 12).padding(.vertical, 10).allowsHitTesting(false)
                 }
             }
+            if !store.assistLog.isEmpty { AssistLogView() }
             HStack(spacing: Socle.M.space2) {
+                Button(store.assistOn ? L.t("assist.stop") : L.t("assist.give")) {
+                    if store.assistOn { store.assistStop() } else { store.assistOn = true }
+                }
+                .buttonStyle(SocleButtonStyle(store.assistOn ? .primary : .secondary, height: Socle.M.sizeControl)).fixedSize()
+                .disabled(!cfg.isReady)
                 Menu {
                     ForEach(Array(cfg.quick.enumerated()), id: \.offset) { _, q in
                         Button(q.title) { input = ""; store.startAgent(t, q.prompt) }
@@ -217,7 +223,7 @@ struct AgentPanel: View {
                     .buttonStyle(SocleButtonStyle(.primary, height: Socle.M.sizeControl)).fixedSize()
                     .disabled(busy || !cfg.isReady || input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
-            Text(L.t("agent.rights")).socle(Socle.T.caption).foregroundStyle(Socle.C.textSubtle).fixedSize(horizontal: false, vertical: true)
+            Text(store.assistOn ? (AssistMode.fullAuto ? L.t("assist.hint.auto") : L.t("assist.hint")) : L.t("agent.rights")).socle(Socle.T.caption).foregroundStyle(Socle.C.textSubtle).fixedSize(horizontal: false, vertical: true)
         }
     }
 
@@ -243,6 +249,13 @@ struct AgentBubble: View {
     }
 
     var body: some View {
+        if message.auto == true {
+            Label(L.t("assist.auto"), systemImage: "arrow.turn.down.right").socle(Socle.T.caption)
+                .foregroundStyle(Socle.C.textDisabled).lineLimit(1).frame(maxWidth: .infinity, alignment: .leading)
+        } else { content }
+    }
+
+    @ViewBuilder private var content: some View {
         let isUser = message.role == .user
         let parsed = isUser ? (text: message.text, proposal: nil as AgentProposal?) : AgentParse.split(message.text)
         HStack(alignment: .top, spacing: 0) {
@@ -421,6 +434,7 @@ struct AgentSettingsView: View {
                 }
                 Text(L.t("agent.settings.share.note")).socle(Socle.T.meta).foregroundStyle(Socle.C.textSubtle).fixedSize(horizontal: false, vertical: true)
             }
+            AssistSettingsSection()
             if AgentCurrency.code != "USD" {
                 Field(label: L.t("agent.settings.fx", AgentCurrency.code)) {
                     TextField(AgentCurrency.rate(AgentConfig()).map { String(format: "%.4f", $0) } ?? "0", value: $cfg.fxRate, format: .number).socleField().frame(width: 160)
@@ -482,5 +496,39 @@ struct AgentSettingsView: View {
         let p = NSOpenPanel()
         p.canChooseDirectories = true; p.canChooseFiles = false
         if p.runModal() == .OK, let u = p.url { cfg.workdir = u.path; testResult = nil }
+    }
+}
+
+
+/// Dernières actions de l'agent en mode assistance (une ligne chacune).
+struct AssistLogView: View {
+    @EnvironmentObject var store: Store
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(L.t("assist.log").uppercased()).socle(Socle.T.eyebrow).foregroundStyle(Socle.C.textSubtle).lineLimit(1)
+            ForEach(store.assistLog.suffix(5)) { e in
+                HStack(spacing: Socle.M.space1_5) {
+                    Image(systemName: e.ok ? "checkmark" : "xmark").font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(e.ok ? Socle.C.textSubtle : Socle.C.danger).accessibilityHidden(true)
+                    Text(e.text).socle(Socle.T.caption).foregroundStyle(Socle.C.textMuted).lineLimit(1).truncationMode(.tail)
+                }
+            }
+        }
+        .padding(Socle.M.space2).frame(maxWidth: .infinity, alignment: .leading)
+        .background(Socle.C.bgSunken, in: RoundedRectangle(cornerRadius: Socle.M.radius))
+    }
+}
+
+/// Réglages du mode assistance (dans les réglages de l'agent).
+struct AssistSettingsSection: View {
+    @AppStorage("assistFullAuto") private var fullAuto = false
+    @AppStorage("assistPersistent") private var persistent = false
+    var body: some View {
+        VStack(alignment: .leading, spacing: Socle.M.space2) {
+            Text(L.t("assist.settings.title").uppercased()).socle(Socle.T.eyebrow).foregroundStyle(Socle.C.textSubtle)
+            Toggle(L.t("assist.settings.persistent"), isOn: $persistent)
+            Toggle(L.t("assist.settings.fullauto"), isOn: $fullAuto)
+            Text(L.t("assist.settings.note")).socle(Socle.T.meta).foregroundStyle(Socle.C.textSubtle).fixedSize(horizontal: false, vertical: true)
+        }
     }
 }
