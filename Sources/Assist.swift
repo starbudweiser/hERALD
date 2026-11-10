@@ -5,11 +5,6 @@ import WebKit
 
 @MainActor
 extension Store {
-    func assistNote(_ text: String, ok: Bool = true) {
-        assistLog.append(AssistEntry(text: text, ok: ok))
-        if assistLog.count > 80 { assistLog.removeFirst(assistLog.count - 80) }
-    }
-
     /// Demande l'accord de l'utilisateur (sauf autonomie complète). Refusé si le mode est coupé pendant l'attente.
     func assistAsk(_ title: String, _ detail: String) async -> Bool {
         if AssistMode.fullAuto { return true }

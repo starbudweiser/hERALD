@@ -356,6 +356,8 @@ check(VersionCompare.isNewer("v1.2.10", than: "1.2.9") && !VersionCompare.isNewe
 let acts = AssistParse.extract("Je m'en occupe.\n```herald-act\n[{\"do\":\"browser_open\",\"url\":\"https://bsky.app\"},{\"do\":\"browser_read\"}]\n```")
 check(acts.actions.count == 2 && acts.actions[0].kind == "browser_open" && acts.actions[0].str("url") == "https://bsky.app" && acts.clean == "Je m'en occupe.", "blocs herald-act lus")
 check(AssistParse.extract("rien à faire").actions.isEmpty, "aucune action")
+let w = AssistParse.wantsControl("Je prends la main.\n```herald-assist\n{}\n```")
+check(w.wanted && w.clean == "Je prends la main." && !AssistParse.wantsControl("non").wanted, "demande de la main par l'agent")
 check(AssistGuard.isIrreversible("Envoyer") && AssistGuard.isIrreversible("Post") && !AssistGuard.isIrreversible("Suivant"), "actions irréversibles reconnues")
 check(AssistGuard.isForbidden("Payer maintenant") && AssistGuard.isForbidden("I'm not a robot") && !AssistGuard.isForbidden("Répondre"), "paiement et CAPTCHA refusés")
 check(AssistGuard.isSensitiveField(type: "password", autocomplete: "", name: "") && AssistGuard.isSensitiveField(type: "text", autocomplete: "cc-number", name: "") && !AssistGuard.isSensitiveField(type: "text", autocomplete: "email", name: "subject"), "champs sensibles")

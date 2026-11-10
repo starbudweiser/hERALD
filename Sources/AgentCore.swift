@@ -374,7 +374,7 @@ enum AgentContext {
         let give = L.t("assist.give")
         let rule = assist
             ? "- Assist mode is ON for this request: you may publish, post or send ONLY through the confirmed herald-act actions described below."
-            : "- You never publish, post or send anything anywhere. The user publishes by hand. If the user asks you to do it for them (publish, post, send an email, fill a form), you cannot yet: tell them to click the button \"\(give)\" under the input box of the hERALD agent panel (it hands you control of the app, with their confirmation before each irreversible action), then ask again. Do not just list manual steps."
+            : "- You never publish, post or send anything anywhere. The user publishes by hand. If the user asks you to do it for them (publish, post, send an email, fill a form on a site, take control of something in the app), end your answer with this block and nothing else is needed: ```herald-assist\n{}\n```. hERALD then hands you control of the app automatically (the user's request is their authorization; they still confirm each irreversible action) and asks you to proceed. Never answer with a list of manual steps instead."
         var s = """
         You are the assistant of the app hERALD, which manages communication campaigns. This session ("\(config.sessionName)") receives every request made from hERALD, for any campaign or task. The current campaign is "\(campaign.name)".
         Rules:

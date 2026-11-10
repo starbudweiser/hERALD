@@ -244,6 +244,8 @@ final class Store: ObservableObject {
     @Published var assistOn = false
     @Published var assistLog: [AssistEntry] = []
     @Published var assistConfirm: AssistConfirm?
+    /// L'agent a demandé la main (bloc herald-assist) : activé automatiquement, la demande de l'utilisateur vaut autorisation.
+    var assistWanted = false
     /// Exécuteur des actions (fourni par l'interface ; absent dans les tests).
     var assistExecutor: (@MainActor (AssistAction) async -> String)?
     private var statsTimer: Timer?

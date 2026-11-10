@@ -72,6 +72,16 @@ enum AssistParse {
     }
 }
 
+extension AssistParse {
+    /// L'agent demande la main : bloc ```herald-assist {}``` ; renvoie le texte sans le bloc.
+    static func wantsControl(_ reply: String) -> (clean: String, wanted: Bool) {
+        guard let re = try? NSRegularExpression(pattern: "```herald-assist[^\\n]*\\n.*?```", options: [.dotMatchesLineSeparators]),
+              let m = re.firstMatch(in: reply, range: NSRange(reply.startIndex..., in: reply)), let r = Range(m.range, in: reply) else { return (reply, false) }
+        var c = reply; c.removeSubrange(r)
+        return (c.trimmingCharacters(in: .whitespacesAndNewlines), true)
+    }
+}
+
 enum AssistGuard {
     private static let irreversible = ["send", "submit", "post", "publish", "tweet", "reply", "confirm", "delete", "remove", "share", "sign up", "register",
                                        "envoyer", "publier", "poster", "valider", "supprimer", "répondre", "partager", "confirmer", "s'inscrire",
@@ -126,6 +136,11 @@ extension Store {
     private static let dayFormat: DateFormatter = {
         let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"; f.locale = Locale(identifier: "en_US_POSIX"); return f
     }()
+
+    func assistNote(_ text: String, ok: Bool = true) {
+        assistLog.append(AssistEntry(text: text, ok: ok))
+        if assistLog.count > 80 { assistLog.removeFirst(assistLog.count - 80) }
+    }
 
     func assistContact(_ ref: String?) -> Contact? {
         guard let r = ref?.trimmingCharacters(in: .whitespaces), !r.isEmpty else { return nil }

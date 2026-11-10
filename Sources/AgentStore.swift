@@ -32,6 +32,13 @@ extension Store {
         guard !agentBusy.contains(t) else { return }
         agentTasks[t] = Task {
             var actions = await self.askAgent(t, question)
+            // l'agent a demandé la main : mode assistance activé, la demande est relancée
+            if self.assistWanted, !Task.isCancelled {
+                self.assistWanted = false
+                self.assistOn = true
+                self.assistNote(L.t("assist.auto.on"))
+                actions = await self.askAgent(t, "[hERALD] Assist mode is now ON (the user asked for this). Carry out the request now with herald-act actions.", auto: true)
+            }
             var rounds = 0
             // mode assistance : on exécute les actions de l'agent, puis on lui renvoie les résultats, jusqu'à la fin du travail
             while self.assistOn, !actions.isEmpty, rounds < AssistMode.maxRounds, !Task.isCancelled, let run = self.assistExecutor {
@@ -104,6 +111,7 @@ extension Store {
                                                      user: AgentContext.message(question: q, context: campBlock + "\n" + postBlock))
                 reply = r.text; usage = r.usage
             }
+            if !assistOn { let w = AssistParse.wantsControl(reply); reply = w.clean; if w.wanted { assistWanted = true } }
             let acts = AssistParse.extract(reply)
             reply = acts.clean
             if assistOn { found = acts.actions }
