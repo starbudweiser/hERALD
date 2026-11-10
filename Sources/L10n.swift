@@ -354,6 +354,15 @@ enum L {
         "about.tagline": "Gestion de campagnes de communication pour moddeurs.",
         "about.license": "Licence MIT",
         "import.invalid.title": "Import impossible",
+        "today.todo": "À faire",
+        "today.next": "Prochains jours",
+        "today.none": "Rien à faire aujourd'hui.",
+        "today.kpi.views": "Vues +24 h",
+        "today.kpi.step": "Prochaine étape",
+        "today.late": "en retard",
+        "today.nolink": "lien à ajouter",
+        "today.nomilestone": "Aucun jalon à venir",
+        "today.select": "Choisissez une ligne pour l'ouvrir ici.",
     ]
 
     private static let en: [String: String] = [
@@ -690,6 +699,15 @@ enum L {
         "about.tagline": "Communication campaign management for modders.",
         "about.license": "MIT License",
         "import.invalid.title": "Import failed",
+        "today.todo": "To do",
+        "today.next": "Coming days",
+        "today.none": "Nothing to do today.",
+        "today.kpi.views": "Views +24 h",
+        "today.kpi.step": "Next step",
+        "today.late": "late",
+        "today.nolink": "link to add",
+        "today.nomilestone": "No upcoming milestone",
+        "today.select": "Pick a line to open it here.",
     ]
 
     private static let es: [String: String] = [
@@ -1026,6 +1044,15 @@ enum L {
         "about.tagline": "Gestión de campañas de comunicación para modders.",
         "about.license": "Licencia MIT",
         "import.invalid.title": "Importación imposible",
+        "today.todo": "Por hacer",
+        "today.next": "Próximos días",
+        "today.none": "Nada que hacer hoy.",
+        "today.kpi.views": "Vistas +24 h",
+        "today.kpi.step": "Próximo paso",
+        "today.late": "con retraso",
+        "today.nolink": "falta el enlace",
+        "today.nomilestone": "Ningún hito próximo",
+        "today.select": "Elige una línea para abrirla aquí.",
     ]
 
     private static let it: [String: String] = [
@@ -1362,5 +1389,14 @@ enum L {
         "about.tagline": "Gestione di campagne di comunicazione per modder.",
         "about.license": "Licenza MIT",
         "import.invalid.title": "Importazione impossibile",
+        "today.todo": "Da fare",
+        "today.next": "Prossimi giorni",
+        "today.none": "Niente da fare oggi.",
+        "today.kpi.views": "Visualizzazioni +24 h",
+        "today.kpi.step": "Prossimo passo",
+        "today.late": "in ritardo",
+        "today.nolink": "link da aggiungere",
+        "today.nomilestone": "Nessuna tappa in arrivo",
+        "today.select": "Scegli una riga per aprirla qui.",
     ]
 }
