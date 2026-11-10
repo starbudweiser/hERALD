@@ -29,15 +29,12 @@ extension Store {
         guard hasCampaign else { return [] }
         let cal = Calendar.current
         var out: [TodoItem] = []
-        for p in posts where p.status != .published {
+        for p in posts where p.status == .idea || p.status == .draft {   // Validé et Publié = fait
             if cal.isDate(p.date, inSameDayAs: now) {
                 out.append(TodoItem(kind: .postToday, postID: p.id, title: p.title, meta: p.status.label))
             } else if p.date < now {
                 out.append(TodoItem(kind: .postLate, postID: p.id, title: p.title, meta: L.t("today.late")))
             }
-        }
-        for p in posts where p.status == .published && p.link.trimmingCharacters(in: .whitespaces).isEmpty {
-            out.append(TodoItem(kind: .noLink, postID: p.id, title: p.title, meta: L.t("today.nolink")))
         }
         for p in posts where p.unreadFeedback > 0 {
             out.append(TodoItem(kind: .feedback, postID: p.id, title: p.title, meta: L.t("feedback.unread", p.unreadFeedback)))
