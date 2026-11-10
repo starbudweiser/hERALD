@@ -62,8 +62,26 @@ final class Presence: NSObject {
         let quit = NSMenuItem(title: L.t("menubar.quit"), action: #selector(quitApp), keyEquivalent: "")
         let about = NSMenuItem(title: L.t("side.about", "hERALD"), action: #selector(showAbout), keyEquivalent: "")
         [open, refresh, about, quit].forEach { $0.target = self }
-        menu.addItem(open); menu.addItem(refresh); menu.addItem(.separator()); menu.addItem(about); menu.addItem(quit)
+        menu.addItem(open); menu.addItem(refresh); menu.addItem(.separator())
+        let icon = NSMenuItem(title: L.t("settings.icon"), action: nil, keyEquivalent: "")
+        let sub = NSMenu()
+        for m in IconMode.allCases {
+            let it = NSMenuItem(title: m.label, action: #selector(chooseMode(_:)), keyEquivalent: "")
+            it.target = self
+            it.representedObject = m.rawValue
+            it.state = m == mode ? .on : .off
+            sub.addItem(it)
+        }
+        icon.submenu = sub
+        menu.addItem(icon); menu.addItem(.separator()); menu.addItem(about); menu.addItem(quit)
         return menu
+    }
+
+    @objc private func chooseMode(_ sender: NSMenuItem) {
+        guard let raw = sender.representedObject as? String, let m = IconMode(rawValue: raw) else { return }
+        IconMode.current = m
+        apply()
+        if m == .dock { showMain() }  // plus d'icône ici : la fenêtre reste accessible par le Dock
     }
 
     /// Clic gauche : ouvre ou ferme la fenêtre. Clic droit (ou Ctrl-clic) : menu, juste sous l'icône.
