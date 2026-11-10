@@ -12,7 +12,7 @@ struct PostsView: View {
     }
 
     var body: some View {
-        SplitLayout(width: 520) {
+        SplitLayout(width: 480) {
             HStack(spacing: Socle.M.space2) {
                 SocleSegmented(options: [nil] + PostStatus.allCases.map { Optional($0) }, selection: filter,
                                label: { s in s?.label ?? L.t("filter.all", store.posts.count) }, onSelect: { filter = $0 })
@@ -222,14 +222,17 @@ struct PostInspector: View {
     // MARK: Pied
 
     private var footer: some View {
-        HStack(spacing: Socle.M.space2) {
-            CopyButton(title: L.t("action.copy")) { text.wrappedValue }.disabled(text.wrappedValue.isEmpty)
+        VStack(spacing: Socle.M.space2) {
             TextField(L.t("post.linkafter"), text: post.link).socleField()
-            Button(post.wrappedValue.status == .published ? L.t("post.published.done") : L.t("post.markpublished")) {
-                post.wrappedValue.status = .published
+            HStack(spacing: Socle.M.space2) {
+                CopyButton(title: L.t("action.copy")) { text.wrappedValue }.disabled(text.wrappedValue.isEmpty)
+                Spacer(minLength: 0)
+                Button(post.wrappedValue.status == .published ? L.t("post.published.done") : L.t("post.markpublished")) {
+                    post.wrappedValue.status = .published
+                }
+                .buttonStyle(SocleButtonStyle(.primary, height: Socle.M.sizeControlLg)).fixedSize()
+                .disabled(post.wrappedValue.status == .published)
             }
-            .buttonStyle(SocleButtonStyle(.primary, height: Socle.M.sizeControlLg)).fixedSize()
-            .disabled(post.wrappedValue.status == .published)
         }
     }
 }

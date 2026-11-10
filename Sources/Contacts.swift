@@ -41,7 +41,7 @@ struct ContactsView: View {
     }
 
     var body: some View {
-        SplitLayout(width: 520) {
+        SplitLayout(width: 480) {
             HStack(spacing: Socle.M.space2) {
                 SocleSegmented(options: ContactFilter.allCases, selection: filter, label: \.label, onSelect: { filter = $0 })
                 Spacer(minLength: 0)
@@ -137,8 +137,6 @@ struct ContactDetail: View {
                 Picker("", selection: contact.status) { ForEach(ContactStatus.allCases) { Text($0.label).tag($0) } }
                     .labelsHidden().fixedSize()
                 Spacer(minLength: 0)
-                Button(L.t("contact.remove")) { removing = true }
-                    .buttonStyle(SocleButtonStyle(.tertiary, height: Socle.M.sizeControl)).fixedSize()
             }
         }
     }
@@ -182,6 +180,11 @@ struct ContactDetail: View {
             }
             Field(label: L.t("col.notes")) {
                 TextEditor(text: contact.notes).socle(Socle.T.body).socleField(multiline: true).frame(height: 64)
+            }
+            HStack {
+                Spacer(minLength: 0)
+                Button(L.t("contact.remove")) { removing = true }
+                    .buttonStyle(SocleButtonStyle(.tertiary, height: Socle.M.sizeControl)).fixedSize()
             }
         }
     }
