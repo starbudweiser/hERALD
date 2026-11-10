@@ -372,5 +372,41 @@ check(st.assistMailDraft(AssistAction(kind: "mail_draft", args: ["contact": "ali
 check(st.assistSetting(AssistAction(kind: "setting", args: ["key": "agentConfig", "value": "x"])).hasPrefix("error"), "réglage non autorisé refusé")
 }
 
+// OpenMacApps : décodage du catalogue, fusion (mise en avant, retrait), cumul des visites venues du site
+let omaJSON = """
+[{"name":"Alpha","slug":"alpha","repository":"https://github.com/Owner/Alpha","category":"Games","featured":false,"verified":"2026-11-10","added":"2026-11-10","iconUrl":"/catalog/alpha/assets/icon.png","tags":["x"],"assets":[{"path":"p"}]},
+ {"name":"Beta","id":"beta","repository":"https://github.com/owner/Beta.git","featured":true},
+ {"name":"Autre","slug":"autre","repository":"https://github.com/someone/Autre"},
+ {"name":"SansDepot","slug":"sans"}]
+"""
+let cat = try! OMA.decodeCatalog(Data(omaJSON.utf8))
+check(cat.count == 4 && cat[0].verified == "2026-11-10" && cat[1].featured == true, "catalogue décodé (champs inconnus ignorés)")
+check(OMA.repo("https://github.com/Owner/Alpha", owner: "owner") == "Owner/Alpha" && OMA.repo("https://github.com/x/y", owner: "owner") == nil && OMA.repo(nil, owner: "o") == nil, "dépôt du compte suivi")
+let (m1, e1) = OMA.merge([], catalog: cat, owner: "OWNER")
+check(m1.map(\.slug) == ["alpha", "beta"] && e1 == [.featured("Beta")], "premier relevé : 2 applis, seule la mise en avant notifiée")
+check(m1[0].iconURL?.absoluteString == "https://openmacapps.com/catalog/alpha/assets/icon.png" && m1[0].page?.absoluteString == "https://openmacapps.com/apps/alpha/", "icône et fiche")
+var cat2 = cat; cat2.remove(at: 1); cat2[0].featured = true
+let (m2, e2) = OMA.merge(m1, catalog: cat2, owner: "owner")
+check(e2 == [.featured("Alpha"), .removed("Beta")] && m2[1].listed == false, "mise en avant et fiche retirée signalées")
+let (_, e3) = OMA.merge(m2, catalog: cat, owner: "owner")
+check(e3 == [.listed("Beta"), .featured("Beta")], "fiche revenue")
+let refs: Any = [["referrer": "openmacapps.com", "count": 7, "uniques": 3], ["referrer": "Google", "count": 50, "uniques": 20]]
+check(OMA.referrer(refs) == (7, 3) && OMA.referrer([Any]()) == (0, 0), "visites venues d'openmacapps.com")
+check(OMA.downloads([["assets": [["download_count": 5], ["download_count": 2]]], ["assets": [["download_count": 1]]]]) == 8, "somme des téléchargements")
+let d0 = Date(timeIntervalSince1970: 1_800_000_000)
+var vis: [OMAVisit] = []
+OMA.record(OMAVisit(date: d0, count: 5, uniques: 2), into: &vis)
+OMA.record(OMAVisit(date: d0.addingTimeInterval(3600), count: 6, uniques: 3), into: &vis)    // même jour : remplacé
+check(vis.count == 1 && OMA.cumulative(vis, \.count) == 6, "un relevé par jour")
+OMA.record(OMAVisit(date: d0.addingTimeInterval(86400), count: 9, uniques: 4), into: &vis)   // +3
+OMA.record(OMAVisit(date: d0.addingTimeInterval(2 * 86400), count: 4, uniques: 4), into: &vis) // baisse : 0
+OMA.record(OMAVisit(date: d0.addingTimeInterval(20 * 86400), count: 2, uniques: 1), into: &vis) // > 14 j : tout compte
+check(OMA.cumulative(vis, \.count) == 6 + 3 + 0 + 2 && OMA.cumulative(vis, \.uniques) == 3 + 1 + 0 + 1, "cumul des referrers")
+var pk = m1[0]; pk.visits = [OMAVisit(date: d0, count: 12, uniques: 5)]
+check(OMA.peak(&pk) == .peak("Alpha", 12) && OMA.peak(&pk) == nil, "premier pic notifié une seule fois")
+var srt = m1; srt[0].visits = [OMAVisit(date: d0, count: 1, uniques: 1)]; srt[1].visits = [OMAVisit(date: d0, count: 9, uniques: 1)]
+check(OMA.sorted(srt).map(\.slug) == ["beta", "alpha"], "tri par visites")
+check(!String(decoding: try! Storage.encode(sample), as: UTF8.self).contains("\"oma\"") && back.oma == nil, "plan sans suivi OpenMacApps : champ absent, relu")
+
 print(failures == 0 ? "OK : tous les tests passent" : "\(failures) échec(s)")
 exit(failures == 0 ? 0 : 1)

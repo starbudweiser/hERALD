@@ -263,6 +263,9 @@ struct SettingsView: View {
     @State private var youtubeKey = Keychain.get("youtube")
     @State private var redditID = Keychain.get("reddit.id")
     @State private var redditSecret = Keychain.get("reddit.secret")
+    @State private var githubToken = Keychain.get("github")
+    @State private var omaOwner = ""
+    @State private var ghMissing = false
     @State private var iconMode = IconMode.current
     @State private var mailClient = MailClient.current
     @State private var agentOn = AgentConfig.current.enabled
@@ -289,6 +292,19 @@ struct SettingsView: View {
                     Button(L.t("settings.youtubekey.open")) { openURL("https://console.cloud.google.com/apis/library/youtube.googleapis.com") }
                         .buttonStyle(SocleButtonStyle(.tertiary, height: Socle.M.sizeControl)).fixedSize()
                 }
+            }
+            Field(label: L.t("settings.github")) {
+                HStack(spacing: Socle.M.space2) {
+                    SecureField(L.t("settings.github.token"), text: $githubToken).socleField()
+                    TextField(L.t("settings.github.owner"), text: $omaOwner).socleField().frame(width: 180)
+                    Button(L.t("settings.github.gh")) {
+                        if let t = OMA.ghToken() { githubToken = t; ghMissing = false } else { ghMissing = true }
+                    }
+                    .buttonStyle(SocleButtonStyle(.tertiary, height: Socle.M.sizeControl)).fixedSize()
+                }
+                Text(L.t(ghMissing ? "settings.github.nogh" : "settings.github.note")).socle(Socle.T.meta)
+                    .foregroundStyle(ghMissing ? Socle.C.warning : Socle.C.textSubtle)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             Field(label: L.t("settings.reddit")) {
                 HStack(spacing: Socle.M.space2) {
@@ -380,6 +396,14 @@ struct SettingsView: View {
                     Keychain.set(youtubeKey.trimmingCharacters(in: .whitespacesAndNewlines), "youtube")
                     Keychain.set(redditID.trimmingCharacters(in: .whitespacesAndNewlines), "reddit.id")
                     Keychain.set(redditSecret.trimmingCharacters(in: .whitespacesAndNewlines), "reddit.secret")
+                    let tok = githubToken.trimmingCharacters(in: .whitespacesAndNewlines)
+                    let own = omaOwner.trimmingCharacters(in: .whitespaces)
+                    let omaChanged = tok != Keychain.get("github") || own != (store.data.oma?.owner ?? "")
+                    Keychain.set(tok, "github")
+                    if omaChanged {
+                        var o = store.oma; o.owner = own.isEmpty ? nil : own; o.checked = nil; store.data.oma = o
+                        Task { await store.refreshOMA() }
+                    }
                     store.data.siteDomain = SiteInput.domain(domain)
                     store.data.goatcounter = SiteInput.goatcounter(goat)
                     var ac = AgentConfig.current; ac.enabled = agentOn; AgentConfig.current = ac
@@ -393,7 +417,7 @@ struct SettingsView: View {
         }
         .padding(Socle.M.space6)
         .frame(width: 660, height: 640)
-        .onAppear { domain = store.data.siteDomain ?? ""; goat = store.data.goatcounter ?? "" }
+        .onAppear { domain = store.data.siteDomain ?? ""; goat = store.data.goatcounter ?? ""; omaOwner = store.data.oma?.owner ?? "" }
         .sheet(isPresented: $agentSettings) { AgentSettingsView() }
         .background(Socle.C.surface)
     }

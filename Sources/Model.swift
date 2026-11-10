@@ -259,6 +259,8 @@ struct AppData: Codable {
     var goatcounter: String?
     var siteError: String?
     var statsChecked: Date?
+    /// Suivi des fiches OpenMacApps (facultatif : anciens plans).
+    var oma: OMAState?
 }
 
 enum Storage {

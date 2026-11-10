@@ -13,7 +13,7 @@ chevauchement, fenêtre plus grande. Socle partout, 4 langues (fr d'abord, en, e
   - groupes titrés (11 pt, `textSubtle`) :
     - **Campagne** : Aujourd'hui (compteur), Calendrier, Publications ;
     - **Démarchage** : Contacts (compteur des relances dues) ;
-    - **Résultats** : Statistiques, Retours (non lus), Veille ;
+    - **Résultats** : Statistiques, Retours (non lus), Veille, OpenMacApps (fiches, visites venues du site, téléchargements ; relevé quotidien) ;
     - **Outils** : Canaux, Agent IA (si activé), Navigateur ;
   - en bas : Réglages, À propos, puis séparateur, « 18 / 26 publiées » + %, barre de progression, pastille verte
     « Boîte de dépôt à jour » (ou orange avec le nombre de fichiers traités, cliquable vers les Réglages).

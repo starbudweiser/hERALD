@@ -3,7 +3,7 @@ import SwiftUI
 
 /// Entrées de la barre latérale qui ouvrent une vue.
 enum Tab: String, CaseIterable {
-    case today, calendar, posts, contacts, stats, feedback, watch, channels, browser
+    case today, calendar, posts, contacts, stats, feedback, watch, oma, channels, browser
 
     var symbol: String {
         switch self {
@@ -14,6 +14,7 @@ enum Tab: String, CaseIterable {
         case .stats: "chart.bar"
         case .feedback: "bubble.left.and.bubble.right"
         case .watch: "binoculars"
+        case .oma: "storefront"
         case .channels: "megaphone"
         case .browser: "globe"
         }
@@ -26,7 +27,8 @@ enum Tab: String, CaseIterable {
 /// État de l'interface (vue affichée, sélections, recherche, fenêtres) ; rien ici n'est enregistré dans le plan.
 @MainActor
 final class UIState: ObservableObject {
-    @Published var tab: Tab = .today { didSet { if tab != oldValue { query = ""; workspace = nil } } }
+    /// HERALD_TAB : vue d'ouverture pour les essais (ex. « oma »).
+    @Published var tab: Tab = Tab(rawValue: ProcessInfo.processInfo.environment["HERALD_TAB"] ?? "") ?? .today { didSet { if tab != oldValue { query = ""; workspace = nil } } }
     /// Espace de publication ouvert (navigateur + panneau), ou nil.
     @Published var workspace: Workspace?
     @Published var selectedPost: UUID?
@@ -119,6 +121,7 @@ struct RootView: View {
             case .stats: StatsView(selectedPost: $ui.selectedPost, tab: $ui.tab).soclePanel()
             case .feedback: FeedbackView(selected: $ui.selectedPost)
             case .watch: WatchView()
+            case .oma: OMAView()
             case .channels: ChannelsView()
             case .browser: BrowserView().soclePanel()
             }
@@ -134,7 +137,7 @@ struct RootView: View {
         case .contacts:
             return HeaderSpec(title: title, subtitle: sub, searchable: true,
                               primary: store.hasCampaign ? (L.t("contact.add"), { ui.selectedContact = store.addContact() }) : nil)
-        case .feedback, .watch, .channels:
+        case .feedback, .watch, .oma, .channels:
             return HeaderSpec(title: title, subtitle: sub, searchable: true, primary: nil)
         case .stats, .browser:
             return HeaderSpec(title: title, subtitle: sub, searchable: false, primary: nil)
@@ -207,7 +210,7 @@ struct Sidebar: View {
                 VStack(alignment: .leading, spacing: 2) {
                     group("side.group.campaign", [.today, .calendar, .posts])
                     group("side.group.outreach", [.contacts])
-                    group("side.group.results", [.stats, .feedback, .watch])
+                    group("side.group.results", [.stats, .feedback, .watch, .oma])
                     groupTools
                 }
                 .padding(.horizontal, 8)
@@ -225,7 +228,7 @@ struct Sidebar: View {
 
     /// Ordre des entrées, repris par les raccourcis ⌘1 à ⌘9.
     private var order: [String] {
-        ["today", "calendar", "posts", "contacts", "stats", "feedback", "watch", "channels"] + (agentOn ? ["agent"] : []) + ["browser"]
+        ["today", "calendar", "posts", "contacts", "stats", "feedback", "watch", "oma", "channels"] + (agentOn ? ["agent"] : []) + ["browser"]
     }
     private func shortcut(_ id: String) -> KeyEquivalent? {
         guard let i = order.firstIndex(of: id), i < 9 else { return nil }
