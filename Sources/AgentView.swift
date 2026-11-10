@@ -210,7 +210,7 @@ struct AgentPanel: View {
                 Button(store.assistOn ? L.t("assist.stop") : L.t("assist.give")) {
                     if store.assistOn { store.assistStop() } else { store.assistOn = true }
                 }
-                .buttonStyle(SocleButtonStyle(store.assistOn ? .primary : .secondary, height: Socle.M.sizeControl)).fixedSize()
+                .buttonStyle(BrandButtonStyle(height: Socle.M.sizeControl)).fixedSize()
                 .disabled(!cfg.isReady)
                 Menu {
                     ForEach(Array(cfg.quick.enumerated()), id: \.offset) { _, q in
@@ -530,5 +530,20 @@ struct AssistSettingsSection: View {
             Toggle(L.t("assist.settings.fullauto"), isOn: $fullAuto)
             Text(L.t("assist.settings.note")).socle(Socle.T.meta).foregroundStyle(Socle.C.textSubtle).fixedSize(horizontal: false, vertical: true)
         }
+    }
+}
+
+
+/// Bouton orange de la marque (le « h » de hERALD) : réservé à la prise de main de l'agent.
+struct BrandButtonStyle: ButtonStyle {
+    var height: CGFloat
+    @Environment(\.isEnabled) private var enabled
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 13, weight: .semibold)).lineLimit(1)
+            .foregroundStyle(Color.black.opacity(0.88))
+            .padding(.horizontal, Socle.M.space3).frame(height: height)
+            .background(Socle.C.brand.opacity(configuration.isPressed ? 0.78 : 1), in: RoundedRectangle(cornerRadius: 4))
+            .opacity(enabled ? 1 : 0.4)
     }
 }
