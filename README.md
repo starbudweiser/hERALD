@@ -1,35 +1,20 @@
+<p align="center"><img src="assets/hERALD_1024.png" width="128" alt="hERALD"></p>
+
 # hERALD
 
-[![Listed on OpenMacApps](https://openmacapps.com/badge.svg)](https://openmacapps.com/apps/herald/)
+[![Listed on OpenMacApps](https://openmacapps.com/badge.svg)](https://openmacapps.com/apps/herald/) [![Latest release](https://img.shields.io/github/v/release/starbudweiser/hERALD)](https://github.com/starbudweiser/hERALD/releases/latest) [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-**Communication campaign management for modders — hERALD never publishes anything itself.**  
-*Gestion de campagne de communication pour moddeurs — hERALD ne publie jamais rien lui-même.*
+**Communication campaign management for modders — hERALD never publishes anything itself.**
+
+🇬🇧 English · 🇫🇷 [Français](#français)
 
 ## About
 
 **hERALD** is a free, open-source macOS app (MIT License) by starbudweiser, written with the help of Claude Code (Anthropic). It plans communication campaigns for modders: it prepares texts, tracks posts and outreach, and never publishes anything itself. Use *About hERALD* in the app menu for the version and credits. Updates are found automatically in this repository's releases (signature checked, installed only when nothing is running; can be switched off in Settings).
 
-🇬🇧 [English](#-english) · 🇫🇷 [Français](#-français)
-
----
-## 🇬🇧 English
+## Features
 
 **Golden rule:** hERALD prepares and tracks. It never publishes: you copy the text and post it yourself. It only sends an outreach email when you click *Send*, after a confirmation, through your Mail app.
-
-### ✨ Talk to your AI agent, from inside your plan (optional)
-
-Switch it on in *Settings → AI agent* and every task of your plan gets a chat with the agent of your choice: **Claude Code**, **Codex or any command-line agent**, or **ChatGPT / any OpenAI-compatible API**. hERALD works exactly the same without it: it is off by default, and nothing changes for you if you never use it.
-
-**Why it is worth it if you run a local AI agent** (Claude Code on your Mac, for instance):
-- **One home for everything.** Every request lands in a single, named Claude Code session ("hERALD"). Open Claude Code later and the whole conversation is there: ask in hERALD, continue in Claude Code, or the other way round.
-- **The agent finds the task by itself.** hERALD sends the task sheet (title, date, channel, status, notes, link, drafts, statistics) with your question, plus the plan and the campaign notes whenever they changed. "Rewrite this one for Reddit" is enough.
-- **It knows your files.** A local agent can read the folder you give it: videos, scripts, press kit, notes. It checks facts instead of guessing them.
-- **Sub-sessions for big jobs.** The agent can open a sub-session for a long piece of work (translate everything, prepare a press kit) and hERALD links it to the task, so you can resume it later.
-- **You stay in charge.** The agent reads and advises. Its proposed changes (notes, drafts in four languages, status) appear as a card with a preview: one click applies them, one click undoes them. It can never mark a post "published" and never publishes anything.
-- **Made for your campaign.** Write instructions once (tone, audience, constraints), edit the quick actions (write the draft, improve the hook, translate, check before publishing), choose what is shared: drafts, statistics, campaign notes.
-- **Private and cheap.** Everything stays on your Mac, sent only to the agent you chose. With Claude Code, a light mode (on by default) starts it without your MCP servers, skills and hooks: a request costs about a hundred times fewer tokens.
-
-Details, setup and tips: [docs/AI_AGENT.md](docs/AI_AGENT.md).
 
 - **Window**: sidebar panel (campaign picker, Today, Calendar, Posts, Contacts, Statistics, Feedback, Monitoring, Channels, AI agent, Browser; ⌘1–⌘9), view header with search (⌘F), status bar. Default 1280 × 800.
 - **Today**: key figures (views +24 h, interactions, downloads, next milestone) and a to-do list: posts due or late, published posts without a link, unread replies, due follow-ups.
@@ -52,6 +37,21 @@ Details, setup and tips: [docs/AI_AGENT.md](docs/AI_AGENT.md).
 - **Drop box**: JSON files dropped in a watched folder are merged automatically (see below).
 - Zoom the whole interface with ⌥+ / ⌥− (⌥0 for actual size), from 70 % to 200 %.
 - Interface in English, French, Spanish and Italian (follows your Mac's language, English otherwise). macOS 14+.
+
+### ✨ Talk to your AI agent, from inside your plan (optional)
+
+Switch it on in *Settings → AI agent* and every task of your plan gets a chat with the agent of your choice: **Claude Code**, **Codex or any command-line agent**, or **ChatGPT / any OpenAI-compatible API**. hERALD works exactly the same without it: it is off by default, and nothing changes for you if you never use it.
+
+**Why it is worth it if you run a local AI agent** (Claude Code on your Mac, for instance):
+- **One home for everything.** Every request lands in a single, named Claude Code session ("hERALD"). Open Claude Code later and the whole conversation is there: ask in hERALD, continue in Claude Code, or the other way round.
+- **The agent finds the task by itself.** hERALD sends the task sheet (title, date, channel, status, notes, link, drafts, statistics) with your question, plus the plan and the campaign notes whenever they changed. "Rewrite this one for Reddit" is enough.
+- **It knows your files.** A local agent can read the folder you give it: videos, scripts, press kit, notes. It checks facts instead of guessing them.
+- **Sub-sessions for big jobs.** The agent can open a sub-session for a long piece of work (translate everything, prepare a press kit) and hERALD links it to the task, so you can resume it later.
+- **You stay in charge.** The agent reads and advises. Its proposed changes (notes, drafts in four languages, status) appear as a card with a preview: one click applies them, one click undoes them. It can never mark a post "published" and never publishes anything.
+- **Made for your campaign.** Write instructions once (tone, audience, constraints), edit the quick actions (write the draft, improve the hook, translate, check before publishing), choose what is shared: drafts, statistics, campaign notes.
+- **Private and cheap.** Everything stays on your Mac, sent only to the agent you chose. With Claude Code, a light mode (on by default) starts it without your MCP servers, skills and hooks: a request costs about a hundred times fewer tokens.
+
+Details, setup and tips: [docs/AI_AGENT.md](docs/AI_AGENT.md).
 
 ### Drop box (automation)
 
@@ -89,10 +89,33 @@ Change file format ([full JSON Schema](docs/herald-changes.schema.json)):
 
 `campaign` (id or name, created if missing; default: the campaign on screen), `channel` (id, name or kind), `milestone` (id or title). Dates: `YYYY-MM-DD` (noon), `YYYY-MM-DD HH:MM` (local time) or ISO 8601. Status: `idea`, `draft`, `approved`, `published`. Feedback kinds: `comment`, `downloads`, `endorsements`, `stars`, `views`, `other`.
 
+## Install
+
+**[Download the latest notarized release](https://github.com/starbudweiser/hERALD/releases/latest)**, unzip it and move hERALD to your Applications folder. Requires **macOS 14 Sonoma** or later.
+
+## Build
+
 Build: `./build_app.sh` · tests: `tests/run_tests.sh`
 
+## Languages
+
+English, French, Spanish and Italian. The app follows your Mac's preferred language automatically (English if it is none of these four).
+
+## Support
+
+💬 Help and community: [Skyrim Mac Toolkit Discord](https://discord.gg/jRS4rvynx6) · bug reports: [GitHub Issues](https://github.com/starbudweiser/hERALD/issues).
+
+## License
+
+Released under the **MIT License**. See [LICENSE](LICENSE).
+
 ---
-## 🇫🇷 Français
+
+## Français
+
+**Gestion de campagne de communication pour moddeurs — hERALD ne publie jamais rien lui-même.**
+
+💬 Aide et communauté : [Discord du Skyrim Mac Toolkit](https://discord.gg/jRS4rvynx6)
 
 **Règle d'or :** hERALD prépare et suit. Il ne publie jamais : vous copiez le texte et publiez vous-même. Il n'envoie un e-mail de démarchage que sur votre clic sur *Envoyer*, après confirmation, par votre app Mail.
 
