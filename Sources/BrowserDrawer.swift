@@ -59,12 +59,12 @@ struct BrowserDrawerTab: View {
                 Image(systemName: "chevron.up").font(.system(size: 9, weight: .bold))
                 Text(L.t("drawer.tab")).font(.system(size: 11))
             }
-            .foregroundStyle(Socle.C.textMuted)
+            .foregroundStyle(Socle.C.onAccentFill)
             .padding(.horizontal, 14).frame(height: 18)
-            .background(Socle.C.surfaceRaised)
+            .background(Socle.C.accentFill)
             .clipShape(UnevenRoundedRectangle(topLeadingRadius: Socle.M.radiusLg, topTrailingRadius: Socle.M.radiusLg))
             .overlay(UnevenRoundedRectangle(topLeadingRadius: Socle.M.radiusLg, topTrailingRadius: Socle.M.radiusLg)
-                .stroke(Socle.C.borderStrong, lineWidth: 1))
+                .stroke(Socle.C.accent, lineWidth: 1))
         }
         .buttonStyle(.plain).help(L.t("drawer.open"))
     }

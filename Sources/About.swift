@@ -10,7 +10,10 @@ enum About {
 
     static func show() {
         if window == nil { window = makeWindow() }
-        window?.center()
+        if let host = NSApp.windows.first(where: { $0 !== window && $0.isVisible && $0.canBecomeMain }), let w = window {
+            let f = host.frame
+            w.setFrameOrigin(NSPoint(x: f.midX - w.frame.width / 2, y: f.midY - w.frame.height / 2))
+        } else { window?.center() }
         window?.present()
     }
 
