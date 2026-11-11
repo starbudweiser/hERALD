@@ -53,7 +53,7 @@ extension Store {
             s += " · " + (w.lastChecked.map { L.t("mon.last", L.date($0)) } ?? L.t("mon.never"))
             if w.unreadMentions > 0 { s += " · " + L.t("mon.unread", w.unreadMentions) }
             if let e = w.error { s += " · " + e }
-            let late = !w.isKeyword && (w.lastChecked ?? .distantPast) < now.addingTimeInterval(-7 * 86400)
+            let late = !w.isKeyword && (w.lastChecked ?? .distantPast) < now.addingTimeInterval(-2 * 86400)
             out.append(MonitorLine(symbol: "binoculars", title: w.name.isEmpty ? w.ref : w.name, detail: s, state: (w.error != nil || late) ? .warn : .ok))
         }
 

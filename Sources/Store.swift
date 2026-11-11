@@ -207,6 +207,30 @@ final class Store: ObservableObject {
         }
     }
 
+    /// Une fois par jour, relève les suivis de versions (GitHub, Nexus). Avant, ils ne l'étaient qu'au lancement de
+    /// l'appli, et seulement après une semaine : une appli laissée ouverte les laissait vieillir.
+    func refreshVersionWatchIfDue() async {
+        guard !checking else { return }
+        let due = data.watch.filter { !$0.isKeyword && ($0.lastChecked ?? .distantPast) < Date().addingTimeInterval(-86400 + 60) }
+        guard !due.isEmpty else { return }
+        checking = true
+        defer { checking = false }
+        let key = Keychain.get("nexus")
+        for item in due {
+            let result = await Watcher.fetch(item, nexusKey: key)
+            guard let i = data.watch.firstIndex(where: { $0.id == item.id }) else { continue }
+            data.watch[i].lastChecked = Date()
+            switch result {
+            case .success(let snap):
+                data.watch[i].error = nil
+                data.watch[i].history.append(snap)
+                if data.watch[i].history.count > 200 { data.watch[i].history.removeFirst() }
+            case .failure(let e):
+                data.watch[i].error = e.message
+            }
+        }
+    }
+
     func checkAll() async {
         guard !checking else { return }
         checking = true
@@ -269,11 +293,11 @@ final class Store: ObservableObject {
     /// heure ; sinon un par jour. Vérifié toutes les 10 minutes, en arrière-plan, sans rien afficher.
     func startStats() {
         guard statsTimer == nil else { return }
-        let t = Timer(timeInterval: 600, repeats: true) { [weak self] _ in Task { @MainActor in await self?.refreshStatsIfDue(); await self?.refreshOMAIfDue(); self?.autoScanRepliesIfDue(); await self?.refreshKeywordWatchIfDue() } }
+        let t = Timer(timeInterval: 600, repeats: true) { [weak self] _ in Task { @MainActor in await self?.refreshStatsIfDue(); await self?.refreshOMAIfDue(); self?.autoScanRepliesIfDue(); await self?.refreshKeywordWatchIfDue(); await self?.refreshVersionWatchIfDue() } }
         t.tolerance = 120   // le système regroupe les réveils (économie d'énergie en arrière-plan)
         RunLoop.main.add(t, forMode: .common)
         statsTimer = t
-        Task { await refreshStatsIfDue(); await refreshOMAIfDue(); autoScanRepliesIfDue(); await refreshKeywordWatchIfDue() }
+        Task { await refreshStatsIfDue(); await refreshOMAIfDue(); autoScanRepliesIfDue(); await refreshKeywordWatchIfDue(); await refreshVersionWatchIfDue() }
     }
 
     var campaignActive: Bool {
