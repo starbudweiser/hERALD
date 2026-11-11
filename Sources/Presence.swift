@@ -113,37 +113,47 @@ final class Presence: NSObject {
         }
     }
 
-    /// Le fanion et ses ondes du logo, sans le carré sombre : fanion ambre, hampe grise, ondes bleues.
-    /// Dessin dans le repère 1024 du logo (origine en haut), recadré sur le motif.
-    static func silhouette(height: CGFloat = 18) -> NSImage {
-        let box = CGRect(x: 246, y: 186, width: 672, height: 672)
+    /// Le fanion du logo en grand, sans le carré sombre ni la hampe, avec les ondes bleues en bas à droite, par-dessus.
+    /// Dessin dans un repère 640 × 640 (origine en haut).
+    static func silhouette(height: CGFloat = 20) -> NSImage {
+        let box = CGRect(x: 0, y: 0, width: 640, height: 640)
         let img = NSImage(size: NSSize(width: height, height: height), flipped: true) { rect in
             guard let ctx = NSGraphicsContext.current?.cgContext else { return false }
             ctx.scaleBy(x: rect.width / box.width, y: rect.height / box.height)
-            ctx.translateBy(x: -box.minX, y: -box.minY)
             let amber = NSColor(red: 0xf5 / 255, green: 0x9e / 255, blue: 0x0b / 255, alpha: 1)
             let blue = NSColor(red: 0x0e / 255, green: 0xa5 / 255, blue: 0xe9 / 255, alpha: 1)
-            // hampe
-            NSColor(white: 0.62, alpha: 1).setFill()
-            NSBezierPath(roundedRect: CGRect(x: 262, y: 204, width: 34, height: 600), xRadius: 17, yRadius: 17).fill()
-            // fanion à queue fendue
+            // fanion à queue fendue (coordonnées du logo × 1,7)
+            func f(_ x: CGFloat, _ y: CGFloat) -> CGPoint { CGPoint(x: (x - 296) * 1.8 + 10, y: (y - 224) * 1.8 + 10) }
             amber.setFill()
             let flag = NSBezierPath()
-            flag.move(to: CGPoint(x: 296, y: 224)); flag.line(to: CGPoint(x: 640, y: 224)); flag.line(to: CGPoint(x: 560, y: 374))
-            flag.line(to: CGPoint(x: 640, y: 524)); flag.line(to: CGPoint(x: 296, y: 524)); flag.close(); flag.fill()
+            flag.move(to: f(296, 224)); flag.line(to: f(640, 224)); flag.line(to: f(560, 374))
+            flag.line(to: f(640, 524)); flag.line(to: f(296, 524)); flag.close(); flag.fill()
             // « H » découpé dans le fanion
             ctx.setBlendMode(.clear)
-            let h = NSAttributedString(string: "H", attributes: [.font: NSFont.systemFont(ofSize: 210, weight: .heavy), .foregroundColor: NSColor.black])
-            let hs = h.size()
-            h.draw(at: CGPoint(x: 420 - hs.width / 2, y: 368 - hs.height / 2))
+            let h = NSAttributedString(string: "H", attributes: [.font: NSFont.systemFont(ofSize: 380, weight: .heavy), .foregroundColor: NSColor.black])
+            let hs = h.size(); let hc = f(420, 368)
+            h.draw(at: CGPoint(x: hc.x - hs.width / 2, y: hc.y - hs.height / 2))
+            // liseré dégagé autour des ondes, pour qu'elles se détachent du fanion
+            let radii: [CGFloat] = [105, 175, 245]
+            let center = CGPoint(x: 330, y: 470)
+            func arcs(_ extra: CGFloat) {
+                for (i, r) in radii.enumerated() {
+                    let arc = NSBezierPath()
+                    arc.appendArc(withCenter: center, radius: r, startAngle: -40, endAngle: 40, clockwise: false)
+                    arc.lineWidth = 52 - CGFloat(i) * 6 + extra
+                    arc.lineCapStyle = .round
+                    arc.stroke()
+                }
+            }
+            NSColor.black.setStroke(); arcs(34)
             ctx.setBlendMode(.normal)
-            // ondes d'annonce
-            for (i, r) in [120.0, 200.0, 280.0].enumerated() {
+            // ondes d'annonce, au premier plan
+            for (i, r) in radii.enumerated() {
                 let arc = NSBezierPath()
-                arc.appendArc(withCenter: CGPoint(x: 600, y: 664), radius: r, startAngle: -40, endAngle: 40, clockwise: false)
-                arc.lineWidth = 40 - CGFloat(i) * 6
+                arc.appendArc(withCenter: center, radius: r, startAngle: -40, endAngle: 40, clockwise: false)
+                arc.lineWidth = 52 - CGFloat(i) * 6
                 arc.lineCapStyle = .round
-                blue.withAlphaComponent(1 - CGFloat(i) * 0.25).setStroke()
+                blue.setStroke()
                 arc.stroke()
             }
             return true
