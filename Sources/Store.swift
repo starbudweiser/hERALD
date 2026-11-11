@@ -202,7 +202,7 @@ final class Store: ObservableObject {
     /// Vérifie tout au lancement si le dernier relevé date de plus d'une semaine.
     func checkIfStale() async {
         let week: TimeInterval = 7 * 86400
-        if data.watch.contains(where: { ($0.lastChecked ?? .distantPast) < Date().addingTimeInterval(-week) }) {
+        if data.watch.contains(where: { !$0.isKeyword &&  ($0.lastChecked ?? .distantPast) < Date().addingTimeInterval(-week) }) {
             await checkAll()
         }
     }
@@ -212,7 +212,7 @@ final class Store: ObservableObject {
         checking = true
         let key = Keychain.get("nexus")
         for item in data.watch {
-            if item.kind == .reddit { _ = await checkRedditWatch(item.id); continue }
+            if item.isKeyword { _ = await checkKeywordWatch(item.id); continue }
             let result = await Watcher.fetch(item, nexusKey: key)
             guard let i = data.watch.firstIndex(where: { $0.id == item.id }) else { continue }
             data.watch[i].lastChecked = Date()
@@ -269,11 +269,11 @@ final class Store: ObservableObject {
     /// heure ; sinon un par jour. Vérifié toutes les 10 minutes, en arrière-plan, sans rien afficher.
     func startStats() {
         guard statsTimer == nil else { return }
-        let t = Timer(timeInterval: 600, repeats: true) { [weak self] _ in Task { @MainActor in await self?.refreshStatsIfDue(); await self?.refreshOMAIfDue(); self?.autoScanRepliesIfDue(); await self?.refreshRedditWatchIfDue() } }
+        let t = Timer(timeInterval: 600, repeats: true) { [weak self] _ in Task { @MainActor in await self?.refreshStatsIfDue(); await self?.refreshOMAIfDue(); self?.autoScanRepliesIfDue(); await self?.refreshKeywordWatchIfDue() } }
         t.tolerance = 120   // le système regroupe les réveils (économie d'énergie en arrière-plan)
         RunLoop.main.add(t, forMode: .common)
         statsTimer = t
-        Task { await refreshStatsIfDue(); await refreshOMAIfDue(); autoScanRepliesIfDue(); await refreshRedditWatchIfDue() }
+        Task { await refreshStatsIfDue(); await refreshOMAIfDue(); autoScanRepliesIfDue(); await refreshKeywordWatchIfDue() }
     }
 
     var campaignActive: Bool {
@@ -427,7 +427,7 @@ struct WeekReport {
         start = now.addingTimeInterval(-7 * 86400)
         let week = start...now
         var rel: [Release] = []
-        for w in data.watch {
+        for w in data.watch where !w.isKeyword {
             // Une version compte si elle diffère de la précédente et a été vue (ou publiée) dans la semaine.
             var previous: String?
             for s in w.history {
@@ -440,7 +440,7 @@ struct WeekReport {
             }
         }
         releases = rel.sorted { ($0.date ?? .distantPast) > ($1.date ?? .distantPast) }
-        watched = data.watch.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+        watched = data.watch.filter { !$0.isKeyword }.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
         let posts = campaign?.posts ?? []
         published = posts.filter { $0.status == .published && week.contains($0.date) }.sorted { $0.date < $1.date }
         let next = now...now.addingTimeInterval(7 * 86400)
@@ -504,7 +504,7 @@ enum Watcher {
         switch item.kind {
         case .github: return await github(item.ref)
         case .nexus: return await nexus(item.ref, key: nexusKey)
-        case .reddit: return .failure(WatchError(message: L.t("watch.invalid")))   // relevée par Store.checkRedditWatch
+        case .reddit, .youtube: return .failure(WatchError(message: L.t("watch.invalid")))   // relevées par Store.checkKeywordWatch
         }
     }
 

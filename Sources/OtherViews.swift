@@ -178,7 +178,7 @@ struct WatchView: View {
             .padding(.horizontal, Socle.M.space3).padding(.bottom, Socle.M.space2)
             Divider().overlay(Socle.C.borderSubtle)
             ForEach(store.data.watch.filter { ui.matches($0.name, $0.ref, $0.notes) }) { w in
-                ItemRow(selected: w.id == selected, symbol: w.error != nil ? "exclamationmark.triangle" : w.kind == .reddit ? "text.magnifyingglass" : "shippingbox",
+                ItemRow(selected: w.id == selected, symbol: w.error != nil ? "exclamationmark.triangle" : w.isKeyword ? "text.magnifyingglass" : "shippingbox",
                         tint: w.error != nil ? Socle.C.warning : Socle.C.textMuted, title: w.name,
                         meta: w.unreadMentions > 0 ? L.t("watch.reddit.new", w.unreadMentions) : w.latest?.version ?? L.t("watch.unchecked"),
                         metaColor: w.unreadMentions > 0 ? Socle.C.warning : Socle.C.accentText,
@@ -221,7 +221,7 @@ struct WatchDetail: View {
                     set: { v in if let i = store.data.watch.firstIndex(where: { $0.id == item.id }) { store.data.watch[i].notes = v } }))
                 .socleField()
             }
-            if item.kind == .reddit {
+            if item.isKeyword {
                 MentionList(item: item)
             } else {
             Text(L.t("watch.history").uppercased()).socle(Socle.T.eyebrow).foregroundStyle(Socle.C.textSubtle)
@@ -256,26 +256,30 @@ struct WatchDetail: View {
     }
 }
 
-/// Veille Reddit : posts trouvés par mots-clés (relevés une fois par jour par treg).
+/// Veille par mots-clés : posts Reddit (treg) ou vidéos YouTube (API officielle), relevés une fois par jour.
 struct MentionList: View {
     @EnvironmentObject var store: Store
     let item: WatchItem
 
     var body: some View {
         let list = item.mentions ?? []
+        let yt = item.kind == .youtube
+        let ready = yt ? !Keychain.get("youtube").isEmpty : Treg.available
         HStack(spacing: Socle.M.space2) {
-            Text(L.t("watch.reddit.mentions", list.count).uppercased()).socle(Socle.T.eyebrow).foregroundStyle(Socle.C.textSubtle)
+            Text(L.t(yt ? "watch.youtube.mentions" : "watch.reddit.mentions", list.count).uppercased()).socle(Socle.T.eyebrow).foregroundStyle(Socle.C.textSubtle)
             Spacer()
             if item.unreadMentions > 0 {
                 Button(L.t("watch.reddit.markread")) { store.markMentionsRead(item.id) }
                     .buttonStyle(SocleButtonStyle(.tertiary, height: Socle.M.sizeControl)).fixedSize()
             }
-            Button(L.t("watch.reddit.check")) { Task { await store.checkRedditWatch(item.id) } }
+            Button(L.t("watch.reddit.check")) { Task { await store.checkKeywordWatch(item.id) } }
                 .buttonStyle(SocleButtonStyle(.secondary, height: Socle.M.sizeControl)).fixedSize()
-                .disabled(!Treg.available)
+                .disabled(!ready)
         }
-        if !Treg.available { Callout(kind: .warning, text: L.t("treg.err.notoken")) }
-        if list.isEmpty { EmptyState(text: L.t(item.mentions == nil ? "watch.reddit.empty" : "watch.reddit.none")) }
+        if !ready { Callout(kind: .warning, text: L.t(yt ? "stats.err.youtubekey" : "treg.err.notoken")) }
+        if list.isEmpty {
+            EmptyState(text: L.t(item.mentions == nil ? (yt ? "watch.youtube.empty" : "watch.reddit.empty") : (yt ? "watch.youtube.none" : "watch.reddit.none")))
+        }
         else {
             ScrollView {
                 LazyVStack(spacing: 0) {
@@ -301,9 +305,11 @@ struct MentionList: View {
     }
 
     private func meta(_ m: Mention) -> String {
-        var parts = ["r/\(m.place)", L.day(m.date)]
+        let yt = m.id.hasPrefix("youtube:")
+        var parts = [yt ? m.place : "r/\(m.place)", L.day(m.date)]
         if !m.author.isEmpty { parts.append("u/\(m.author)") }
-        if let s = m.score { parts.append("▲ \(L.number(s))") }
+        if let v = m.views { parts.append(L.t("watch.youtube.views", L.number(v))) }
+        if let s = m.score { parts.append(yt ? "👍 \(L.number(s))" : "▲ \(L.number(s))") }
         if let c = m.comments { parts.append(L.t("watch.reddit.comments", c)) }
         return parts.joined(separator: " · ")
     }

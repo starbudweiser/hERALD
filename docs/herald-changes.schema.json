@@ -85,18 +85,19 @@
         "properties": {
           "url": {
             "type": "string",
-            "description": "URL GitHub ou Nexus, « propriétaire/dépôt », « jeu/identifiant », ou « reddit: mots-clés » (veille Reddit par treg)"
+            "description": "URL GitHub ou Nexus, « propriétaire/dépôt », « jeu/identifiant », « reddit: mots-clés » (veille Reddit par treg) ou « youtube: mots-clés » (veille YouTube)"
           },
           "kind": {
             "enum": [
               "github",
               "nexus",
-              "reddit"
+              "reddit",
+              "youtube"
             ]
           },
           "ref": {
             "type": "string",
-            "description": "propriétaire/dépôt, jeu/identifiant, ou mots-clés recherchés sur Reddit"
+            "description": "propriétaire/dépôt, jeu/identifiant, ou mots-clés recherchés sur Reddit ou YouTube"
           },
           "name": {
             "type": "string"

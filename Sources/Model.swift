@@ -195,7 +195,7 @@ struct Campaign: Codable, Identifiable, Hashable {
 }
 
 enum WatchKind: String, Codable, CaseIterable, Identifiable {
-    case github, nexus, reddit
+    case github, nexus, reddit, youtube
     var id: String { rawValue }
     var label: String { L.t("watch.kind.\(rawValue)") }
 }
@@ -210,7 +210,7 @@ struct WatchSnapshot: Codable, Hashable {
     var endorsements: Int?
 }
 
-/// Mention trouvée par une veille par mots-clés (Reddit, via treg) : un post qui parle du sujet.
+/// Mention trouvée par une veille par mots-clés : un post Reddit (via treg) ou une vidéo YouTube (API officielle).
 struct Mention: Codable, Identifiable, Hashable {
     var id: String          // « reddit:<id> », pour ne pas la doubler
     var date: Date
@@ -220,6 +220,7 @@ struct Mention: Codable, Identifiable, Hashable {
     var url = ""
     var score: Int?
     var comments: Int?
+    var views: Int?
     var unread = true
     var found: Date? = Date()
 }
@@ -248,16 +249,21 @@ struct WatchItem: Codable, Identifiable, Hashable {
                 ? URL(string: "https://www.nexusmods.com/\(ref.split(separator: "/")[0])/mods/\(ref.split(separator: "/")[1])") : nil
         case .reddit:
             ref.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed).flatMap { URL(string: "https://www.reddit.com/search/?q=\($0)&t=month") }
+        case .youtube:
+            ref.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed).flatMap { URL(string: "https://www.youtube.com/results?search_query=\($0)") }
         }
     }
+
+    /// Veille par mots-clés (Reddit, YouTube) plutôt que suivi de versions.
+    var isKeyword: Bool { kind == .reddit || kind == .youtube }
 
     /// Lit une URL GitHub ou Nexus (ou « a/b ») et en déduit le type et la référence.
     static func parse(_ input: String) -> (WatchKind, String)? {
         let s = input.trimmingCharacters(in: .whitespacesAndNewlines)
-        // « reddit: skyrim mac » : veille Reddit par mots-clés.
-        if s.lowercased().hasPrefix("reddit:") {
-            let q = s.dropFirst(7).trimmingCharacters(in: .whitespaces)
-            return q.isEmpty ? nil : (.reddit, q)
+        // « reddit: skyrim mac », « youtube: skyrim mac » : veille par mots-clés.
+        for (prefix, kind) in [("reddit:", WatchKind.reddit), ("youtube:", .youtube)] where s.lowercased().hasPrefix(prefix) {
+            let q = s.dropFirst(prefix.count).trimmingCharacters(in: .whitespaces)
+            return q.isEmpty ? nil : (kind, q)
         }
         if let u = URL(string: s), let host = u.host?.lowercased() {
             let parts = u.path.split(separator: "/").map(String.init)

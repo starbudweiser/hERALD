@@ -84,29 +84,35 @@ enum Treg {
     }
 }
 
-// MARK: Veille Reddit par mots-clés
+// MARK: Veille par mots-clés (Reddit, YouTube)
 
 #if canImport(AppKit)
 import UserNotifications
 
 @MainActor
 extension Store {
-    /// Une fois par jour, relève les veilles Reddit (un appel treg par mot-clé, ~0,002 $).
-    func refreshRedditWatchIfDue() async {
-        guard Treg.available, !checking else { return }
-        let due = data.watch.filter { $0.kind == .reddit && ($0.lastChecked ?? .distantPast) < Date().addingTimeInterval(-86400 + 60) }
+    /// Une fois par jour, relève les veilles par mots-clés : Reddit par treg (~0,002 $ le mot-clé),
+    /// YouTube par l'API officielle avec la clé des Réglages (gratuit, ~100 unités de quota par recherche).
+    func refreshKeywordWatchIfDue() async {
+        guard !checking else { return }
+        let ytKey = !Keychain.get("youtube").isEmpty
+        let due = data.watch.filter { w in
+            w.isKeyword && (w.kind == .reddit ? Treg.available : ytKey)
+                && (w.lastChecked ?? .distantPast) < Date().addingTimeInterval(-86400 + 60)
+        }
         guard !due.isEmpty else { return }
-        var fresh: [(String, Mention)] = []
-        for w in due { fresh += await checkRedditWatch(w.id).map { (w.name, $0) } }
+        var fresh: [(WatchKind, Mention)] = []
+        for w in due { fresh += await checkKeywordWatch(w.id).map { (w.kind, $0) } }
         notifyMentions(fresh)
     }
 
-    /// Relève une veille Reddit ; renvoie les mentions nouvelles (marquées non lues). La première relève ne marque rien
-    /// comme nouveau : elle constitue l'état de départ.
+    /// Relève une veille par mots-clés ; renvoie les mentions nouvelles (marquées non lues). La première relève ne marque
+    /// rien comme nouveau : elle constitue l'état de départ.
     @discardableResult
-    func checkRedditWatch(_ id: UUID) async -> [Mention] {
+    func checkKeywordWatch(_ id: UUID) async -> [Mention] {
         guard let item = data.watch.first(where: { $0.id == id }) else { return [] }
-        let result = await Treg.redditSearch(item.ref)
+        let result = item.kind == .youtube ? await StatsFetcher.youtubeSearch(item.ref, key: Keychain.get("youtube"))
+                                           : await Treg.redditSearch(item.ref)
         guard let i = data.watch.firstIndex(where: { $0.id == id }) else { return [] }
         let first = data.watch[i].mentions == nil
         data.watch[i].lastChecked = Date()
@@ -121,7 +127,7 @@ extension Store {
             var fresh: [Mention] = []
             for var m in found {
                 if let k = list.firstIndex(where: { $0.id == m.id }) {
-                    list[k].score = m.score; list[k].comments = m.comments   // compteurs à jour
+                    list[k].score = m.score; list[k].comments = m.comments; list[k].views = m.views   // compteurs à jour
                 } else if !known.contains(m.id) {
                     m.unread = !first
                     list.append(m)
@@ -131,7 +137,8 @@ extension Store {
             list.sort { $0.date > $1.date }
             if list.count > 300 { list.removeLast(list.count - 300) }
             data.watch[i].mentions = list
-            data.watch[i].history.append(WatchSnapshot(version: L.t("watch.reddit.count", list.count), title: list.first?.title ?? ""))
+            data.watch[i].history.append(WatchSnapshot(version: L.t(item.kind == .youtube ? "watch.youtube.count" : "watch.reddit.count", list.count),
+                                                       title: list.first?.title ?? ""))
             if data.watch[i].history.count > 200 { data.watch[i].history.removeFirst() }
             return fresh
         }
@@ -142,14 +149,17 @@ extension Store {
         for k in data.watch[i].mentions!.indices { data.watch[i].mentions![k].unread = false }
     }
 
-    private func notifyMentions(_ fresh: [(String, Mention)]) {
+    private func notifyMentions(_ fresh: [(WatchKind, Mention)]) {
         guard !fresh.isEmpty, Bundle.main.bundleIdentifier != nil else { return }
-        let body = fresh.count == 1 ? L.t("notif.mention.body", fresh[0].1.place, fresh[0].1.title) : L.t("notif.mention.many", fresh.count)
+        let yt = fresh.allSatisfy { $0.0 == .youtube }, rd = fresh.allSatisfy { $0.0 == .reddit }
+        let body = fresh.count == 1
+            ? L.t(yt ? "notif.mention.yt.body" : "notif.mention.body", fresh[0].1.place, fresh[0].1.title)
+            : L.t(yt ? "notif.mention.yt.many" : rd ? "notif.mention.many" : "notif.mention.mixed", fresh.count)
         let center = UNUserNotificationCenter.current()
         center.requestAuthorization(options: [.alert, .sound]) { ok, _ in
             guard ok else { return }
             let c = UNMutableNotificationContent()
-            c.title = L.t("notif.mention.title"); c.body = body; c.sound = .default
+            c.title = L.t(yt ? "notif.mention.yt.title" : "notif.mention.title"); c.body = body; c.sound = .default
             center.add(UNNotificationRequest(identifier: "mention-\(UUID().uuidString)", content: c, trigger: nil))
         }
     }

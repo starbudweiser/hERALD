@@ -249,6 +249,36 @@ enum StatsFetcher {
         }
     }
 
+    /// Recherche YouTube du dernier mois par pertinence (100 unités de quota), puis vues et commentaires (1 unité).
+    static func youtubeSearch(_ q: String, key: String) async -> Result<[Mention], WatchError> {
+        guard !key.isEmpty else { return .failure(WatchError(message: L.t("stats.err.youtubekey"))) }
+        var c = URLComponents(string: "https://www.googleapis.com/youtube/v3/search")!
+        let since = ISO8601DateFormatter().string(from: Date().addingTimeInterval(-30 * 86400))
+        c.queryItems = [.init(name: "part", value: "snippet"), .init(name: "type", value: "video"), .init(name: "order", value: "relevance"),
+                        .init(name: "maxResults", value: "25"), .init(name: "q", value: q), .init(name: "publishedAfter", value: since),
+                        .init(name: "key", value: key)]
+        let found: Result<[Mention], WatchError> = await get(c.url!).flatMap { j in
+            guard let items = (j as? [String: Any])?["items"] as? [[String: Any]] else { return .failure(WatchError(message: L.t("watch.parse"))) }
+            let iso = ISO8601DateFormatter()
+            return .success(items.compactMap { it in
+                guard let vid = (it["id"] as? [String: Any])?["videoId"] as? String, let sn = it["snippet"] as? [String: Any] else { return nil }
+                let title = (sn["title"] as? String ?? "").replacingOccurrences(of: "&#39;", with: "'").replacingOccurrences(of: "&quot;", with: "\"")
+                    .replacingOccurrences(of: "&amp;", with: "&")
+                return Mention(id: "youtube:\(vid)", date: (sn["publishedAt"] as? String).flatMap { iso.date(from: $0) } ?? Date(),
+                               title: title, place: sn["channelTitle"] as? String ?? "", url: "https://www.youtube.com/watch?v=\(vid)")
+            })
+        }
+        guard case .success(var list) = found, !list.isEmpty else { return found }
+        let ids = list.map { String($0.id.dropFirst(8)) }
+        if case .success(let stats) = await youtube(ids, key: key) {
+            for k in list.indices {
+                let s = stats[String(list[k].id.dropFirst(8))]
+                list[k].views = s?.views; list[k].score = s?.likes; list[k].comments = s?.comments
+            }
+        }
+        return .success(list)
+    }
+
     /// Fil d'un post par l'API officielle (oauth.reddit.com) : Reddit refuse désormais les lectures anonymes en .json.
     private static func redditThread(_ id: String, keys: StatKeys, limit: Int) async -> Result<Any, WatchError> {
         let auth = await RedditAuth.shared.bearer(id: keys.redditID, secret: keys.redditSecret)
