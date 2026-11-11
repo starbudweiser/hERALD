@@ -264,6 +264,7 @@ struct SettingsView: View {
     @State private var youtubeKey = Keychain.get("youtube")
     @State private var redditID = Keychain.get("reddit.id")
     @State private var redditSecret = Keychain.get("reddit.secret")
+    @State private var tregToken = Keychain.get("treg.token")
     @State private var githubToken = Keychain.get("github")
     @State private var omaOwner = ""
     @State private var ghMissing = false
@@ -317,6 +318,16 @@ struct SettingsView: View {
                         .fixedSize(horizontal: false, vertical: true)
                     Spacer(minLength: 0)
                     Button(L.t("settings.reddit.open")) { openURL("https://www.reddit.com/prefs/apps") }
+                        .buttonStyle(SocleButtonStyle(.tertiary, height: Socle.M.sizeControl)).fixedSize()
+                }
+            }
+            Field(label: L.t("settings.treg")) {
+                SecureField(L.t("settings.treg.token"), text: $tregToken).socleField()
+                HStack(spacing: Socle.M.space2) {
+                    Text(L.t("settings.treg.note", String(format: "%.3f", Treg.spent))).socle(Socle.T.meta).foregroundStyle(Socle.C.textSubtle)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 0)
+                    Button(L.t("settings.treg.open")) { openURL("https://treg.to") }
                         .buttonStyle(SocleButtonStyle(.tertiary, height: Socle.M.sizeControl)).fixedSize()
                 }
             }
@@ -414,6 +425,7 @@ struct SettingsView: View {
                     Keychain.set(youtubeKey.trimmingCharacters(in: .whitespacesAndNewlines), "youtube")
                     Keychain.set(redditID.trimmingCharacters(in: .whitespacesAndNewlines), "reddit.id")
                     Keychain.set(redditSecret.trimmingCharacters(in: .whitespacesAndNewlines), "reddit.secret")
+                    Keychain.set(tregToken.trimmingCharacters(in: .whitespacesAndNewlines), "treg.token")
                     let tok = githubToken.trimmingCharacters(in: .whitespacesAndNewlines)
                     let own = omaOwner.trimmingCharacters(in: .whitespaces)
                     let omaChanged = tok != Keychain.get("github") || own != (store.data.oma?.owner ?? "")

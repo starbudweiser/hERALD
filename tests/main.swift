@@ -10,6 +10,8 @@ check(WatchItem.parse("https://www.nexusmods.com/skyrimspecialedition/mods/12604
 check(WatchItem.parse("owner/repo")! == (.github, "owner/repo"), "raccourci GitHub")
 check(WatchItem.parse("skyrim/42")! == (.nexus, "skyrim/42"), "raccourci Nexus")
 check(WatchItem.parse("n'importe quoi") == nil, "adresse invalide")
+check(WatchItem.parse("reddit: skyrim mac")! == (.reddit, "skyrim mac"), "veille Reddit par mots-clés")
+check(WatchItem.parse("Reddit:  ") == nil, "veille Reddit vide refusée")
 
 // Import CSV des retours
 let csv = "date;type;valeur;texte\n2026-11-11;comment;3;Super\n2026-11-12,downloads,120,\n2026-11-13;inconnu;x;?\n"

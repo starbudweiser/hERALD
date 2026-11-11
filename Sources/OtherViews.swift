@@ -178,9 +178,11 @@ struct WatchView: View {
             .padding(.horizontal, Socle.M.space3).padding(.bottom, Socle.M.space2)
             Divider().overlay(Socle.C.borderSubtle)
             ForEach(store.data.watch.filter { ui.matches($0.name, $0.ref, $0.notes) }) { w in
-                ItemRow(selected: w.id == selected, symbol: w.error != nil ? "exclamationmark.triangle" : "shippingbox",
+                ItemRow(selected: w.id == selected, symbol: w.error != nil ? "exclamationmark.triangle" : w.kind == .reddit ? "text.magnifyingglass" : "shippingbox",
                         tint: w.error != nil ? Socle.C.warning : Socle.C.textMuted, title: w.name,
-                        meta: w.latest?.version ?? L.t("watch.unchecked"), metaColor: Socle.C.accentText,
+                        meta: w.unreadMentions > 0 ? L.t("watch.reddit.new", w.unreadMentions) : w.latest?.version ?? L.t("watch.unchecked"),
+                        metaColor: w.unreadMentions > 0 ? Socle.C.warning : Socle.C.accentText,
+                        highlight: w.unreadMentions > 0,
                         action: { selected = w.id }) { Badge(text: w.kind.label) }
             }
         } detail: {
@@ -219,6 +221,9 @@ struct WatchDetail: View {
                     set: { v in if let i = store.data.watch.firstIndex(where: { $0.id == item.id }) { store.data.watch[i].notes = v } }))
                 .socleField()
             }
+            if item.kind == .reddit {
+                MentionList(item: item)
+            } else {
             Text(L.t("watch.history").uppercased()).socle(Socle.T.eyebrow).foregroundStyle(Socle.C.textSubtle)
             if item.history.isEmpty { EmptyState(text: L.t("watch.history.empty")) }
             else {
@@ -244,9 +249,63 @@ struct WatchDetail: View {
                     }
                 }
             }
+            }
             Spacer(minLength: 0)
         }
         .padding(Socle.M.space4)
+    }
+}
+
+/// Veille Reddit : posts trouvés par mots-clés (relevés une fois par jour par treg).
+struct MentionList: View {
+    @EnvironmentObject var store: Store
+    let item: WatchItem
+
+    var body: some View {
+        let list = item.mentions ?? []
+        HStack(spacing: Socle.M.space2) {
+            Text(L.t("watch.reddit.mentions", list.count).uppercased()).socle(Socle.T.eyebrow).foregroundStyle(Socle.C.textSubtle)
+            Spacer()
+            if item.unreadMentions > 0 {
+                Button(L.t("watch.reddit.markread")) { store.markMentionsRead(item.id) }
+                    .buttonStyle(SocleButtonStyle(.tertiary, height: Socle.M.sizeControl)).fixedSize()
+            }
+            Button(L.t("watch.reddit.check")) { Task { await store.checkRedditWatch(item.id) } }
+                .buttonStyle(SocleButtonStyle(.secondary, height: Socle.M.sizeControl)).fixedSize()
+                .disabled(!Treg.available)
+        }
+        if !Treg.available { Callout(kind: .warning, text: L.t("treg.err.notoken")) }
+        if list.isEmpty { EmptyState(text: L.t(item.mentions == nil ? "watch.reddit.empty" : "watch.reddit.none")) }
+        else {
+            ScrollView {
+                LazyVStack(spacing: 0) {
+                    ForEach(list) { m in
+                        Button { if let u = URL(string: m.url) { Browser.openURL(u) } } label: {
+                            HStack(alignment: .firstTextBaseline, spacing: Socle.M.space3) {
+                                Circle().fill(m.unread ? Socle.C.warning : Color.clear).frame(width: 6, height: 6)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(m.title).socle(Socle.T.body).foregroundStyle(m.unread ? Socle.C.textStrong : Socle.C.text)
+                                        .lineLimit(2).multilineTextAlignment(.leading)
+                                    Text(meta(m)).socle(Socle.T.meta).foregroundStyle(Socle.C.textSubtle).lineLimit(1)
+                                }
+                                Spacer(minLength: 0)
+                            }
+                            .padding(.vertical, Socle.M.space1_5).contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        Divider().overlay(Socle.C.borderSubtle)
+                    }
+                }
+            }
+        }
+    }
+
+    private func meta(_ m: Mention) -> String {
+        var parts = ["r/\(m.place)", L.day(m.date)]
+        if !m.author.isEmpty { parts.append("u/\(m.author)") }
+        if let s = m.score { parts.append("▲ \(L.number(s))") }
+        if let c = m.comments { parts.append(L.t("watch.reddit.comments", c)) }
+        return parts.joined(separator: " · ")
     }
 }
 

@@ -212,6 +212,7 @@ final class Store: ObservableObject {
         checking = true
         let key = Keychain.get("nexus")
         for item in data.watch {
+            if item.kind == .reddit { _ = await checkRedditWatch(item.id); continue }
             let result = await Watcher.fetch(item, nexusKey: key)
             guard let i = data.watch.firstIndex(where: { $0.id == item.id }) else { continue }
             data.watch[i].lastChecked = Date()
@@ -268,11 +269,11 @@ final class Store: ObservableObject {
     /// heure ; sinon un par jour. Vérifié toutes les 10 minutes, en arrière-plan, sans rien afficher.
     func startStats() {
         guard statsTimer == nil else { return }
-        let t = Timer(timeInterval: 600, repeats: true) { [weak self] _ in Task { @MainActor in await self?.refreshStatsIfDue(); await self?.refreshOMAIfDue(); self?.autoScanRepliesIfDue() } }
+        let t = Timer(timeInterval: 600, repeats: true) { [weak self] _ in Task { @MainActor in await self?.refreshStatsIfDue(); await self?.refreshOMAIfDue(); self?.autoScanRepliesIfDue(); await self?.refreshRedditWatchIfDue() } }
         t.tolerance = 120   // le système regroupe les réveils (économie d'énergie en arrière-plan)
         RunLoop.main.add(t, forMode: .common)
         statsTimer = t
-        Task { await refreshStatsIfDue(); await refreshOMAIfDue(); autoScanRepliesIfDue() }
+        Task { await refreshStatsIfDue(); await refreshOMAIfDue(); autoScanRepliesIfDue(); await refreshRedditWatchIfDue() }
     }
 
     var campaignActive: Bool {
@@ -324,6 +325,19 @@ final class Store: ObservableObject {
             if pl == .youtube {
                 if let id = StatLink.youtubeID(link), let s = ytResults[id] { result = .success(s) }
                 else { result = .failure(WatchError(message: ytError ?? L.t(StatLink.youtubeID(link) == nil ? "stats.err.link" : "stats.err.notfound"))) }
+            } else if pl == .reddit, keys.redditID.isEmpty, Treg.available {
+                // Sans clé d'API Reddit : lecture par treg, au plus toutes les 6 heures (payant à l'appel).
+                guard ci < data.campaigns.count, pi < data.campaigns[ci].posts.count else { continue }
+                if let last = data.campaigns[ci].posts[pi].stats?.last?.date, now.timeIntervalSince(last) < 6 * 3600 { continue }
+                switch await Treg.redditPost(link) {
+                case .success(let (snap, replies)):
+                    result = .success(snap)
+                    var p = data.campaigns[ci].posts[pi]
+                    let known = Set(p.feedback.compactMap(\.source))
+                    let fresh = replies.filter { !known.contains($0.source ?? "") }
+                    if !fresh.isEmpty { p.feedback.append(contentsOf: fresh); newReplies += fresh.count; data.campaigns[ci].posts[pi] = p }
+                case .failure(let e): result = .failure(e)
+                }
             } else {
                 result = await StatsFetcher.fetch(link, platform: pl, keys: keys)
             }
@@ -338,7 +352,7 @@ final class Store: ObservableObject {
             case .failure(let e): p.statsError = e.message
             }
             // Reddit : les nouvelles réponses arrivent dans les retours de la publication, marquées non lues.
-            if pl == .reddit, let id = StatLink.redditID(link), case .success(let replies) = await StatsFetcher.redditReplies(id, keys: keys) {
+            if pl == .reddit, !keys.redditID.isEmpty, let id = StatLink.redditID(link), case .success(let replies) = await StatsFetcher.redditReplies(id, keys: keys) {
                 let known = Set(p.feedback.compactMap(\.source))
                 let fresh = replies.filter { !known.contains($0.source ?? "") }
                 if !fresh.isEmpty { p.feedback.append(contentsOf: fresh); newReplies += fresh.count }
@@ -490,6 +504,7 @@ enum Watcher {
         switch item.kind {
         case .github: return await github(item.ref)
         case .nexus: return await nexus(item.ref, key: nexusKey)
+        case .reddit: return .failure(WatchError(message: L.t("watch.invalid")))   // relevée par Store.checkRedditWatch
         }
     }
 
