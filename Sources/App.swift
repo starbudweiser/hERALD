@@ -35,6 +35,7 @@ struct HeraldApp: App {
             }
             CommandGroup(after: .textEditing) {
                 Button(L.t("search.placeholder")) { ui.focusSearch += 1 }.keyboardShortcut("f")
+                Button(L.t("mon.title")) { ui.showMonitor = true }
                 Button(L.t("drawer.toggle")) { ui.toggleBrowser() }.keyboardShortcut("b")
                 Button(L.t("publish.open")) { ui.toggleWorkspace(store) }
                     .keyboardShortcut("b", modifiers: [.command, .shift]).disabled(!store.hasCampaign)

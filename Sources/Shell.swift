@@ -36,6 +36,7 @@ final class UIState: ObservableObject {
     /// Plateforme affichée quand la vue « plateforme » est ouverte.
     @Published var platform: StatPlatform = StatPlatform(rawValue: ProcessInfo.processInfo.environment["HERALD_PLATFORM"] ?? "") ?? .youtube
     @Published var addingPlatform = false
+    @Published var showMonitor = ProcessInfo.processInfo.environment["HERALD_MONITOR"] != nil
     @Published var selectedContact: UUID?
     @Published var query = ""
     @Published var focusSearch = 0
@@ -123,6 +124,7 @@ struct RootView: View {
         } message: { c in Text(c.detail) }
         .onAppear { BrowserModel.shared.reveal = { [weak ui] in if ui?.workspace == nil { ui?.setBrowser(true) }; ui?.showSettings = false } }
         .sheet(isPresented: $ui.editingCampaign) { CampaignSheet().environmentObject(store) }
+        .sheet(isPresented: $ui.showMonitor) { MonitorPanel().environmentObject(store) }
         .sheet(isPresented: $ui.addingPlatform) { AddPlatformSheet().environmentObject(store).environmentObject(ui) }
         .sheet(isPresented: $ui.showSettings) { SettingsView().environmentObject(store) }
         .sheet(isPresented: $store.welcome) { WelcomeView().environmentObject(store) }
@@ -445,9 +447,15 @@ struct CampaignPicker: View {
 
 struct StatusBar: View {
     @EnvironmentObject var store: Store
+    @EnvironmentObject var ui: UIState
 
     var body: some View {
         HStack(spacing: Socle.M.space4) {
+            Button { ui.showMonitor = true } label: {
+                HStack(spacing: 4) { Image(systemName: "eye"); Text(L.t("mon.button")) }
+            }
+            .buttonStyle(.plain).foregroundStyle(Socle.C.accentText).help(L.t("mon.help"))
+            Text("·").foregroundStyle(Socle.C.textDisabled)
             HStack(spacing: 6) {
                 if store.statsChecking || store.checking { ProgressView().controlSize(.mini) }
                 Text(stats).lineLimit(1)
