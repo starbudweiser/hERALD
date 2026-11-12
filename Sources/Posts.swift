@@ -128,6 +128,11 @@ struct PostInspector: View {
                 Text(n).socle(Socle.T.meta).foregroundStyle(Socle.C.textMuted).lineLimit(2)
             }
             TextEditor(text: text).socle(Socle.T.reading).socleField(multiline: true).frame(maxWidth: .infinity, maxHeight: .infinity)
+                .overlay {
+                    if text.wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        WritingAssistant(postID: id, lang: lang, text: text)
+                    }
+                }
         }
     }
 

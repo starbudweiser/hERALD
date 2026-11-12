@@ -637,6 +637,13 @@ enum L {
         "mon.rewrite": "Réécrire",
         "mon.needagent": "La synthèse est rédigée par l'agent IA : activez-le dans les Réglages. La liste ci-dessus fonctionne sans lui.",
         "mon.session": "synthèse",
+        "wr.title": "Page blanche ? L'assistant rédige un premier jet",
+        "wr.sub": "Il utilise le titre, le canal, vos notes et les consignes de la campagne. Vous relisez et corrigez avant de publier.",
+        "wr.hint": "Consigne facultative : ton, angle, points à citer…",
+        "wr.write": "Rédiger le texte",
+        "wr.translate": "Traduire depuis %@",
+        "wr.needagent": "L'assistant utilise l'agent IA : activez-le dans les Réglages.",
+        "wr.session": "rédaction",
     ]
 
     private static let en: [String: String] = [
@@ -1256,6 +1263,13 @@ enum L {
         "mon.rewrite": "Rewrite",
         "mon.needagent": "The summary is written by the AI agent: turn it on in Settings. The list above works without it.",
         "mon.session": "summary",
+        "wr.title": "Blank page? The assistant writes a first draft",
+        "wr.sub": "It uses the title, the channel, your notes and the campaign brief. You review and edit before posting.",
+        "wr.hint": "Optional instruction: tone, angle, points to include…",
+        "wr.write": "Write the text",
+        "wr.translate": "Translate from %@",
+        "wr.needagent": "The assistant uses the AI agent: turn it on in Settings.",
+        "wr.session": "drafting",
     ]
 
     private static let es: [String: String] = [
@@ -1875,6 +1889,13 @@ enum L {
         "mon.rewrite": "Reescribir",
         "mon.needagent": "El resumen lo redacta el agente de IA: actívelo en Ajustes. La lista de arriba funciona sin él.",
         "mon.session": "resumen",
+        "wr.title": "¿Página en blanco? El asistente redacta un primer borrador",
+        "wr.sub": "Usa el título, el canal, tus notas y las instrucciones de la campaña. Revisas y corriges antes de publicar.",
+        "wr.hint": "Instrucción opcional: tono, enfoque, puntos a citar…",
+        "wr.write": "Redactar el texto",
+        "wr.translate": "Traducir desde %@",
+        "wr.needagent": "El asistente usa el agente de IA: actívalo en Ajustes.",
+        "wr.session": "redacción",
     ]
 
     private static let it: [String: String] = [
@@ -2494,5 +2515,12 @@ enum L {
         "mon.rewrite": "Riscrivi",
         "mon.needagent": "La sintesi è scritta dall'agente IA: attivalo nelle Impostazioni. L'elenco qui sopra funziona anche senza.",
         "mon.session": "sintesi",
+        "wr.title": "Pagina bianca? L'assistente scrive una prima bozza",
+        "wr.sub": "Usa il titolo, il canale, le tue note e le istruzioni della campagna. Rivedi e correggi prima di pubblicare.",
+        "wr.hint": "Istruzione facoltativa: tono, taglio, punti da citare…",
+        "wr.write": "Scrivi il testo",
+        "wr.translate": "Traduci da %@",
+        "wr.needagent": "L'assistente usa l'agente IA: attivalo nelle Impostazioni.",
+        "wr.session": "stesura",
     ]
 }
