@@ -656,6 +656,15 @@ enum L {
         "tidy.undo": "Remettre dans la liste",
         "tidy.empty.todo": "Rien à faire : tout est publié. Les publications publiées sont dans « Publiées ».",
         "tidy.empty.archived": "Aucune publication rangée.",
+        "cycle.prepare": "Préparer",
+        "cycle.publish": "Publier",
+        "cycle.listen": "Écouter",
+        "cycle.prepare.sub": "idées et brouillons à rédiger",
+        "cycle.prepare.late": "%d en retard",
+        "cycle.publish.sub": "validées, à publier vous-même",
+        "cycle.listen.sub": "publiées, sous surveillance",
+        "cycle.listen.unread": "%d retour(s) non lu(s)",
+        "cycle.hint": "Une campagne, c'est un cycle : vous préparez les textes, vous les publiez, puis hERALD écoute ce qui se dit en retour.",
     ]
 
     private static let en: [String: String] = [
@@ -1294,6 +1303,15 @@ enum L {
         "tidy.undo": "Put back in the list",
         "tidy.empty.todo": "Nothing to do: everything is published. Published posts are under “Published”.",
         "tidy.empty.archived": "No tidied-away posts.",
+        "cycle.prepare": "Prepare",
+        "cycle.publish": "Publish",
+        "cycle.listen": "Listen",
+        "cycle.prepare.sub": "ideas and drafts to write",
+        "cycle.prepare.late": "%d late",
+        "cycle.publish.sub": "approved, for you to post",
+        "cycle.listen.sub": "published, being watched",
+        "cycle.listen.unread": "%d unread reply(ies)",
+        "cycle.hint": "A campaign is a cycle: you prepare the texts, you post them, then hERALD listens to what comes back.",
     ]
 
     private static let es: [String: String] = [
@@ -1932,6 +1950,15 @@ enum L {
         "tidy.undo": "Volver a la lista",
         "tidy.empty.todo": "Nada por hacer: todo está publicado. Las publicadas están en «Publicadas».",
         "tidy.empty.archived": "Ninguna publicación archivada.",
+        "cycle.prepare": "Preparar",
+        "cycle.publish": "Publicar",
+        "cycle.listen": "Escuchar",
+        "cycle.prepare.sub": "ideas y borradores por redactar",
+        "cycle.prepare.late": "%d con retraso",
+        "cycle.publish.sub": "validadas, para publicar tú",
+        "cycle.listen.sub": "publicadas, bajo vigilancia",
+        "cycle.listen.unread": "%d respuesta(s) sin leer",
+        "cycle.hint": "Una campaña es un ciclo: preparas los textos, los publicas y hERALD escucha lo que se dice en respuesta.",
     ]
 
     private static let it: [String: String] = [
@@ -2570,5 +2597,14 @@ enum L {
         "tidy.undo": "Rimetti nell'elenco",
         "tidy.empty.todo": "Niente da fare: tutto è pubblicato. I post pubblicati sono in «Pubblicati».",
         "tidy.empty.archived": "Nessun post archiviato.",
+        "cycle.prepare": "Preparare",
+        "cycle.publish": "Pubblicare",
+        "cycle.listen": "Ascoltare",
+        "cycle.prepare.sub": "idee e bozze da scrivere",
+        "cycle.prepare.late": "%d in ritardo",
+        "cycle.publish.sub": "approvati, da pubblicare tu",
+        "cycle.listen.sub": "pubblicati, sotto controllo",
+        "cycle.listen.unread": "%d risposta/e non letta/e",
+        "cycle.hint": "Una campagna è un ciclo: prepari i testi, li pubblichi e hERALD ascolta ciò che si dice in risposta.",
     ]
 }

@@ -70,6 +70,7 @@ struct TodayView: View {
         let items = store.todoItems().filter { ui.matches($0.title, $0.meta) }
         let s = store.statsSummary(.day)
         VStack(spacing: 12) {
+            cycle
             HStack(spacing: 12) {
                 kpi(L.t("today.kpi.views"), L.number(s.views))
                 kpi(L.t("stats.kpi.interactions"), L.number(s.interactions))
@@ -99,6 +100,44 @@ struct TodayView: View {
                 } else { upcoming }
             }
         }
+    }
+
+    /// Le cycle d'une campagne en trois temps : préparer, publier, écouter. Chaque étape mène à sa liste.
+    private var cycle: some View {
+        let today = Calendar.current.startOfDay(for: Date())
+        let prep = store.posts.filter { $0.status == .idea || $0.status == .draft }
+        let late = prep.filter { $0.date < today }.count
+        let ready = store.posts.filter { $0.status == .approved }.count
+        let listening = store.posts.filter { $0.status == .published && $0.archived != true && !store.isTidyable($0) }
+        let unread = listening.reduce(0) { $0 + $1.unreadFeedback }
+        return VStack(alignment: .leading, spacing: Socle.M.space2) {
+            HStack(spacing: Socle.M.space2) {
+                step(1, L.t("cycle.prepare"), prep.count, late > 0 ? L.t("cycle.prepare.late", late) : L.t("cycle.prepare.sub"), warn: late > 0) { ui.tab = .posts }
+                Image(systemName: "chevron.right").foregroundStyle(Socle.C.textDisabled)
+                step(2, L.t("cycle.publish"), ready, L.t("cycle.publish.sub"), warn: false) { ui.tab = .posts }
+                Image(systemName: "chevron.right").foregroundStyle(Socle.C.textDisabled)
+                step(3, L.t("cycle.listen"), listening.count, unread > 0 ? L.t("cycle.listen.unread", unread) : L.t("cycle.listen.sub"), warn: false) { ui.tab = .feedback }
+            }
+            .fixedSize(horizontal: false, vertical: true)
+            Text(L.t("cycle.hint")).socle(Socle.T.meta).foregroundStyle(Socle.C.textSubtle)
+        }
+    }
+
+    private func step(_ n: Int, _ title: String, _ count: Int, _ sub: String, warn: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: Socle.M.space3) {
+                Text("\(n)").socle(Socle.T.labelStrong).foregroundStyle(Socle.C.onAccentFill)
+                    .frame(width: 24, height: 24).background(Socle.C.accentFill, in: Circle())
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title.uppercased()).socle(Socle.T.eyebrow).foregroundStyle(Socle.C.textSubtle)
+                    Text(sub).socle(Socle.T.meta).foregroundStyle(warn ? Socle.C.danger : Socle.C.textSubtle).lineLimit(1)
+                }
+                Spacer(minLength: 0)
+                Text("\(count)").socle(Socle.T.stat).foregroundStyle(Socle.C.textStrong)
+            }
+            .padding(Socle.M.space3).frame(maxWidth: .infinity, alignment: .leading).soclePanel().contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     private func open(_ it: TodoItem) {
