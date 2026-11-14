@@ -299,31 +299,35 @@ enum StatsFetcher {
     }
 
     /// Réponses d'un post Reddit (tout le fil, aplati), sans celles de l'auteur du post ni les messages supprimés.
-    static func redditReplies(_ id: String, keys: StatKeys) async -> Result<[Feedback], WatchError> {
+    /// Dans un fil collectif (megathread, message d'un modérateur ou épinglé), seuls comptent les commentaires qui citent nos applis
+    /// (`keywords`) et les réponses faites à ceux-ci : les autres sont les entrées d'autres développeurs.
+    static func redditReplies(_ id: String, keys: StatKeys, keywords: [String]) async -> Result<(items: [Feedback], community: Bool), WatchError> {
         return await redditThread(id, keys: keys, limit: 200).flatMap { j in
             guard let arr = j as? [[String: Any]], arr.count >= 2,
                   let post = ((arr[0]["data"] as? [String: Any])?["children"] as? [[String: Any]])?.first?["data"] as? [String: Any] else {
                 return .failure(WatchError(message: L.t("watch.parse")))
             }
             let op = post["author"] as? String ?? ""
+            let community = RedditScope.isCommunityThread(op: op, title: post["title"] as? String ?? "", stickied: post["stickied"] as? Bool ?? false)
             var out: [Feedback] = []
-            func walk(_ listing: Any?) {
+            func walk(_ listing: Any?, inherited: Bool) {
                 guard let children = ((listing as? [String: Any])?["data"] as? [String: Any])?["children"] as? [[String: Any]] else { return }
                 for c in children where c["kind"] as? String == "t1" {
                     guard let d = c["data"] as? [String: Any], let cid = d["name"] as? String else { continue }
                     let author = d["author"] as? String ?? ""
                     let body = (d["body"] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-                    if author != op, author != "[deleted]", !body.isEmpty, body != "[deleted]", body != "[removed]" {
+                    let relevant = !community || inherited || RedditScope.mentions(body, keywords)
+                    if relevant, author != op, author != "[deleted]", !body.isEmpty, body != "[deleted]", body != "[removed]" {
                         let created = (d["created_utc"] as? Double).map { Date(timeIntervalSince1970: $0) } ?? Date()
                         let link = (d["permalink"] as? String).map { "https://www.reddit.com\($0)" }
                         out.append(Feedback(date: created, kind: .comment, value: 1, text: body,
                                             author: author, url: link, source: "reddit:\(cid)", unread: true))
                     }
-                    walk(d["replies"])
+                    walk(d["replies"], inherited: relevant)
                 }
             }
-            walk(arr[1])
-            return .success(out)
+            walk(arr[1], inherited: false)
+            return .success((out, community))
         }
     }
 
@@ -525,5 +529,17 @@ struct StatsSummary {
         if let b = best { s += "\n\(L.t("stats.best", b.post.title, L.number(b.growth24h)))\n" }
         if !missingLinks.isEmpty { s += "\n\(L.t("stats.missing.title")) : " + missingLinks.map(\.title).joined(separator: ", ") + "\n" }
         return s
+    }
+}
+
+
+/// Fils Reddit collectifs : on n'en retient que ce qui nous concerne.
+enum RedditScope {
+    static func isCommunityThread(op: String, title: String, stickied: Bool) -> Bool {
+        op == "AutoModerator" || stickied || title.lowercased().contains("megathread")
+    }
+    static func mentions(_ text: String, _ keywords: [String]) -> Bool {
+        let t = text.lowercased()
+        return keywords.contains { !$0.isEmpty && t.contains($0.lowercased()) }
     }
 }

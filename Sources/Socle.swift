@@ -317,7 +317,8 @@ struct SocleField: ViewModifier {
 /// Grille de modules Socle : blocs indépendants en colonnes de même largeur (au moins `minimum`), autant que la
 /// largeur en permet, espacées de `space-4`. Agencement en maçonnerie : chaque bloc se place sous la colonne la plus
 /// courte, à sa hauteur naturelle, sans trou sous un bloc plus court que son voisin. Le module où l'on saisit, sinon
-/// celui que la souris survole, reste net ; les autres s'estompent. Chaque bloc de la grille porte `.socleModule()`.
+/// celui que la souris survole, reste net ; les autres s'estompent. Chaque bloc de la grille porte `.socleModule()`, mais
+/// SEULEMENT si Stéphan a demandé cette mise en avant pour l'appli : sans `.socleModule()`, la grille ne fait que le rangement.
 struct SocleModuleGrid<Content: View>: View {
     var minimum: CGFloat = 550  // 500 px × échelle de texte 1,1
     @ViewBuilder var content: Content

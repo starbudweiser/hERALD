@@ -39,31 +39,33 @@ enum Treg {
     // MARK: Reddit
 
     /// Un post Reddit (le nôtre) : compteurs et réponses, en un seul appel.
-    static func redditPost(_ link: String) async -> Result<(StatSnapshot, [Feedback]), WatchError> {
+    static func redditPost(_ link: String, keywords: [String]) async -> Result<(StatSnapshot, [Feedback], Bool), WatchError> {
         let url = link.trimmingCharacters(in: .whitespacesAndNewlines)
         return await call("scrapecreators.x.v1-reddit-post-comments", ["url": url]).flatMap { j, _ in
             guard let o = j as? [String: Any], let post = o["post"] as? [String: Any] else { return .failure(WatchError(message: L.t("watch.parse"))) }
             let op = post["author"] as? String ?? ""
+            let community = RedditScope.isCommunityThread(op: op, title: post["title"] as? String ?? "", stickied: post["stickied"] as? Bool ?? false)
             let snap = StatSnapshot(likes: StatsFetcher.int(post["score"]), comments: StatsFetcher.int(post["num_comments"]),
                                     shares: StatsFetcher.int(post["num_crossposts"]))
             var out: [Feedback] = []
-            func walk(_ v: Any?) {
+            func walk(_ v: Any?, inherited: Bool) {
                 let list = (v as? [[String: Any]]) ?? ((v as? [String: Any])?["items"] as? [[String: Any]]) ?? []
                 for d in list {
                     let author = d["author"] as? String ?? ""
                     let body = (d["body"] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
                     let name = (d["name"] as? String) ?? (d["id"] as? String).map { "t1_\($0)" } ?? ""
-                    if !name.isEmpty, author != op, author != "[deleted]", !body.isEmpty, body != "[deleted]", body != "[removed]" {
+                    let relevant = !community || inherited || RedditScope.mentions(body, keywords)
+                    if relevant, !name.isEmpty, author != op, author != "[deleted]", !body.isEmpty, body != "[deleted]", body != "[removed]" {
                         let created = StatsFetcher.int(d["created_utc"]).map { Date(timeIntervalSince1970: TimeInterval($0)) } ?? Date()
                         let link = (d["url"] as? String) ?? (d["permalink"] as? String).map { "https://www.reddit.com\($0)" }
                         out.append(Feedback(date: created, kind: .comment, value: 1, text: body,
                                             author: author, url: link, source: "reddit:\(name)", unread: true))
                     }
-                    walk(d["replies"])
+                    walk(d["replies"], inherited: relevant)
                 }
             }
-            walk(o["comments"])
-            return .success((snap, out))
+            walk(o["comments"], inherited: false)
+            return .success((snap, out, community))
         }
     }
 

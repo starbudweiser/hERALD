@@ -146,6 +146,23 @@ final class Store: ObservableObject {
 
     func removePost(_ id: UUID) { campaign.posts.removeAll { $0.id == id } }
 
+    /// Mots qui désignent nos applis dans un fil collectif Reddit : noms des applis suivies, du kit, du compte.
+    var replyKeywords: [String] {
+        var k = ["skyrim mac", "toolkit", "starbudweiser"]
+        k += (data.oma?.apps ?? []).map(\.name).filter { $0.count >= 4 }
+        if let o = data.oma?.owner { k.append(o) }
+        return k
+    }
+
+    /// Fil collectif : retire les commentaires relevés plus tôt qui ne nous concernent pas (jamais ceux saisis à la main).
+    static func purgeForeignReplies(_ p: inout Post, keeping kept: [Feedback]) {
+        let keep = Set(kept.compactMap(\.source))
+        p.feedback.removeAll { f in
+            guard let s = f.source, s.hasPrefix("reddit:") else { return false }
+            return !keep.contains(s)
+        }
+    }
+
     func channel(_ id: UUID?) -> Channel? { data.channels.first { $0.id == id } }
     func milestone(_ id: UUID?) -> Milestone? { campaign.milestones.first { $0.id == id } }
 
@@ -353,13 +370,14 @@ final class Store: ObservableObject {
                 // Sans clé d'API Reddit : lecture par treg, au plus toutes les 6 heures (payant à l'appel).
                 guard ci < data.campaigns.count, pi < data.campaigns[ci].posts.count else { continue }
                 if let last = data.campaigns[ci].posts[pi].stats?.last?.date, now.timeIntervalSince(last) < 6 * 3600 { continue }
-                switch await Treg.redditPost(link) {
-                case .success(let (snap, replies)):
+                switch await Treg.redditPost(link, keywords: replyKeywords) {
+                case .success(let (snap, replies, community)):
                     result = .success(snap)
                     var p = data.campaigns[ci].posts[pi]
                     let known = Set(p.feedback.compactMap(\.source))
+                    if community { Self.purgeForeignReplies(&p, keeping: replies) }
                     let fresh = replies.filter { !known.contains($0.source ?? "") }
-                    if !fresh.isEmpty { p.feedback.append(contentsOf: fresh); newReplies += fresh.count; data.campaigns[ci].posts[pi] = p }
+                    p.feedback.append(contentsOf: fresh); newReplies += fresh.count; data.campaigns[ci].posts[pi] = p
                 case .failure(let e): result = .failure(e)
                 }
             } else {
@@ -376,7 +394,8 @@ final class Store: ObservableObject {
             case .failure(let e): p.statsError = e.message
             }
             // Reddit : les nouvelles réponses arrivent dans les retours de la publication, marquées non lues.
-            if pl == .reddit, !keys.redditID.isEmpty, let id = StatLink.redditID(link), case .success(let replies) = await StatsFetcher.redditReplies(id, keys: keys) {
+            if pl == .reddit, !keys.redditID.isEmpty, let id = StatLink.redditID(link), case .success(let (replies, community)) = await StatsFetcher.redditReplies(id, keys: keys, keywords: replyKeywords) {
+                if community { Self.purgeForeignReplies(&p, keeping: replies) }
                 let known = Set(p.feedback.compactMap(\.source))
                 let fresh = replies.filter { !known.contains($0.source ?? "") }
                 if !fresh.isEmpty { p.feedback.append(contentsOf: fresh); newReplies += fresh.count }
