@@ -11,6 +11,7 @@ final class Store: ObservableObject {
     private var backupWork: DispatchWorkItem?
     @Published var checking = false
     /// Premier lancement : propose (sans l'imposer) la campagne d'exemple.
+    @Published var wizard = ProcessInfo.processInfo.environment["HERALD_WIZARD"] != nil
     @Published var welcome = !FileManager.default.fileExists(atPath: Storage.url.path)
 
     /// Dernières lignes du journal de la boîte de dépôt, et résumé du dernier passage (effacé à la lecture).
@@ -109,6 +110,15 @@ final class Store: ObservableObject {
         var c = Campaign()
         c.name = L.t("campaign.new.name")
         c.eventDate = Calendar.current.date(byAdding: .month, value: 1, to: Date()) ?? Date()
+        data.campaigns.append(c)
+        data.selected = c.id
+    }
+
+    /// Campagne de départ construite d'après ce que l'utilisateur annonce (voir Wizard.swift).
+    func addGuided(mods: [String], launch: Date, kinds: Set<ChannelKind>) {
+        var chans = data.channels
+        let c = Sample.guided(mods: mods, launch: launch, kinds: kinds, using: &chans)
+        data.channels = chans
         data.campaigns.append(c)
         data.selected = c.id
     }

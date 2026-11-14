@@ -68,14 +68,14 @@ enum Sample {
         return AppData(campaigns: [c], selected: c.id, channels: chans)
     }
 
-    private static let teaserDrafts = [
+    static let teaserDrafts = [
         "fr": "Quelque chose arrive dans 7 jours… 👀\n[Nom du mod] : [ce qu'il apporte, en une phrase].\nRendez-vous le [date] !",
         "en": "Something is coming in 7 days… 👀\n[Mod name]: [what it brings, in one sentence].\nSee you on [date]!",
         "es": "Algo llega dentro de 7 días… 👀\n[Nombre del mod]: [lo que aporta, en una frase].\n¡Nos vemos el [fecha]!",
         "it": "Qualcosa arriva tra 7 giorni… 👀\n[Nome della mod]: [cosa porta, in una frase].\nAppuntamento al [data]!",
     ]
 
-    private static let launchDrafts = [
+    static let launchDrafts = [
         "fr": """
         [Nom du mod] est disponible : [ce qu'il apporte]
 
@@ -138,14 +138,14 @@ enum Sample {
         """,
     ]
 
-    private static let nexusDrafts = [
+    static let nexusDrafts = [
         "fr": "[Nom du mod] — [accroche]\n\n[Description courte : ce que fait le mod, prérequis, installation.]\nVos retours sont les bienvenus dans les commentaires.",
         "en": "[Mod name] — [tagline]\n\n[Short description: what the mod does, requirements, installation.]\nFeedback is welcome in the comments.",
         "es": "[Nombre del mod] — [eslogan]\n\n[Descripción breve: qué hace el mod, requisitos, instalación.]\nVuestros comentarios son bienvenidos.",
         "it": "[Nome della mod] — [slogan]\n\n[Descrizione breve: cosa fa la mod, requisiti, installazione.]\nI vostri commenti sono benvenuti.",
     ]
 
-    private static let discordDrafts = [
+    static let discordDrafts = [
         "fr": "Bonjour ! Je viens de publier [Nom du mod] : [ce qu'il apporte]. Gratuit, retours bienvenus. Lien : [lien]\nSi ce n'est pas le bon salon, dites-le-moi et je retire le message.",
         "en": "Hi! I've just released [Mod name]: [what it brings]. Free, feedback welcome. Link: [link]\nIf this isn't the right channel, let me know and I'll remove the message.",
         "es": "¡Hola! Acabo de publicar [Nombre del mod]: [lo que aporta]. Gratis, comentarios bienvenidos. Enlace: [enlace]\nSi este no es el canal adecuado, decídmelo y retiro el mensaje.",

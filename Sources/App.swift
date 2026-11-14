@@ -29,7 +29,7 @@ struct HeraldApp: App {
                 Button(L.t("settings.title") + "…") { ui.showSettings = true }.keyboardShortcut(",")
             }
             CommandGroup(replacing: .newItem) {
-                Button(L.t("campaign.add")) { store.addCampaign() }.keyboardShortcut("n")
+                Button(L.t("campaign.add")) { store.wizard = true }.keyboardShortcut("n")
                 Button(L.t("post.add")) { ui.selectedPost = store.addPost(); ui.tab = .posts }
                     .keyboardShortcut("n", modifiers: [.command, .shift]).disabled(!store.hasCampaign)
             }

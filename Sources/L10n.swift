@@ -665,6 +665,19 @@ enum L {
         "cycle.listen.sub": "publiées, sous surveillance",
         "cycle.listen.unread": "%d retour(s) non lu(s)",
         "cycle.hint": "Une campagne, c'est un cycle : vous préparez les textes, vous les publiez, puis hERALD écoute ce qui se dit en retour.",
+        "wiz.title": "Lancer une campagne",
+        "wiz.sub": "Dites-nous ce que vous annoncez : hERALD prépare le calendrier, les publications et des brouillons à compléter. Vous gardez la main sur tout, rien n'est publié sans vous.",
+        "wiz.mods": "Quel(s) mod(s) ou projet(s) annoncez-vous ?",
+        "wiz.mods.hint": "Un nom, ou plusieurs séparés par des virgules",
+        "wiz.date": "Date de sortie",
+        "wiz.channels": "Où voulez-vous communiquer ?",
+        "wiz.preview": "hERALD va créer %d publication(s) et 6 étapes datées, avec des brouillons à compléter.",
+        "wiz.create": "Créer la campagne",
+        "wiz.blank": "Campagne vide",
+        "wiz.cancel": "Annuler",
+        "wiz.campaign": "Lancement : %@",
+        "wiz.start": "Lancer une campagne",
+        "wiz.empty": "Aucune campagne. Dites ce que vous annoncez et hERALD prépare le calendrier, les publications et les brouillons.",
     ]
 
     private static let en: [String: String] = [
@@ -1312,6 +1325,19 @@ enum L {
         "cycle.listen.sub": "published, being watched",
         "cycle.listen.unread": "%d unread reply(ies)",
         "cycle.hint": "A campaign is a cycle: you prepare the texts, you post them, then hERALD listens to what comes back.",
+        "wiz.title": "Start a campaign",
+        "wiz.sub": "Tell us what you are announcing: hERALD prepares the calendar, the posts and drafts to complete. You stay in control, nothing is posted without you.",
+        "wiz.mods": "Which mod(s) or project(s) are you announcing?",
+        "wiz.mods.hint": "One name, or several separated by commas",
+        "wiz.date": "Release date",
+        "wiz.channels": "Where do you want to communicate?",
+        "wiz.preview": "hERALD will create %d post(s) and 6 dated steps, with drafts to complete.",
+        "wiz.create": "Create the campaign",
+        "wiz.blank": "Empty campaign",
+        "wiz.cancel": "Cancel",
+        "wiz.campaign": "Launch: %@",
+        "wiz.start": "Start a campaign",
+        "wiz.empty": "No campaign yet. Say what you are announcing and hERALD prepares the calendar, the posts and the drafts.",
     ]
 
     private static let es: [String: String] = [
@@ -1959,6 +1985,19 @@ enum L {
         "cycle.listen.sub": "publicadas, bajo vigilancia",
         "cycle.listen.unread": "%d respuesta(s) sin leer",
         "cycle.hint": "Una campaña es un ciclo: preparas los textos, los publicas y hERALD escucha lo que se dice en respuesta.",
+        "wiz.title": "Lanzar una campaña",
+        "wiz.sub": "Cuéntanos qué anuncias: hERALD prepara el calendario, las publicaciones y borradores por completar. Tú controlas todo, nada se publica sin ti.",
+        "wiz.mods": "¿Qué mod(s) o proyecto(s) anuncias?",
+        "wiz.mods.hint": "Un nombre, o varios separados por comas",
+        "wiz.date": "Fecha de lanzamiento",
+        "wiz.channels": "¿Dónde quieres comunicar?",
+        "wiz.preview": "hERALD creará %d publicación(es) y 6 etapas con fecha, con borradores por completar.",
+        "wiz.create": "Crear la campaña",
+        "wiz.blank": "Campaña vacía",
+        "wiz.cancel": "Cancelar",
+        "wiz.campaign": "Lanzamiento: %@",
+        "wiz.start": "Lanzar una campaña",
+        "wiz.empty": "Ninguna campaña. Di qué anuncias y hERALD prepara el calendario, las publicaciones y los borradores.",
     ]
 
     private static let it: [String: String] = [
@@ -2606,5 +2645,18 @@ enum L {
         "cycle.listen.sub": "pubblicati, sotto controllo",
         "cycle.listen.unread": "%d risposta/e non letta/e",
         "cycle.hint": "Una campagna è un ciclo: prepari i testi, li pubblichi e hERALD ascolta ciò che si dice in risposta.",
+        "wiz.title": "Avvia una campagna",
+        "wiz.sub": "Dicci cosa annunci: hERALD prepara il calendario, i post e bozze da completare. Hai sempre il controllo, nulla viene pubblicato senza di te.",
+        "wiz.mods": "Quale/i mod o progetto/i annunci?",
+        "wiz.mods.hint": "Un nome, o più separati da virgole",
+        "wiz.date": "Data di uscita",
+        "wiz.channels": "Dove vuoi comunicare?",
+        "wiz.preview": "hERALD creerà %d post e 6 tappe datate, con bozze da completare.",
+        "wiz.create": "Crea la campagna",
+        "wiz.blank": "Campagna vuota",
+        "wiz.cancel": "Annulla",
+        "wiz.campaign": "Lancio: %@",
+        "wiz.start": "Avvia una campagna",
+        "wiz.empty": "Nessuna campagna. Dì cosa annunci e hERALD prepara il calendario, i post e le bozze.",
     ]
 }

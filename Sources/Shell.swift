@@ -128,6 +128,7 @@ struct RootView: View {
         .sheet(isPresented: $ui.addingPlatform) { AddPlatformSheet().environmentObject(store).environmentObject(ui) }
         .sheet(isPresented: $ui.showSettings) { SettingsView().environmentObject(store) }
         .sheet(isPresented: $store.welcome) { WelcomeView().environmentObject(store) }
+        .sheet(isPresented: $store.wizard) { LaunchWizard().environmentObject(store).environmentObject(ui) }
         .alert(L.t("import.invalid.title"), isPresented: Binding(get: { ui.problem != nil }, set: { if !$0 { ui.problem = nil } })) {
             Button("OK") { ui.problem = nil }
         } message: { Text(ui.problem ?? "") }
@@ -138,9 +139,13 @@ struct RootView: View {
             PublishWorkspace(target: w)
         } else if !store.hasCampaign && ui.tab.needsCampaign {
             VStack(spacing: Socle.M.space3) {
-                EmptyState(text: L.t("campaign.empty")).frame(maxHeight: 120)
-                Button(L.t("campaign.add")) { store.addCampaign() }
-                    .buttonStyle(SocleButtonStyle(.primary)).fixedSize()
+                EmptyState(text: L.t("wiz.empty")).frame(maxHeight: 120)
+                HStack(spacing: Socle.M.space2) {
+                    Button(L.t("wiz.start")) { store.wizard = true }
+                        .buttonStyle(SocleButtonStyle(.primary)).fixedSize()
+                    Button(L.t("wiz.blank")) { store.addCampaign() }
+                        .buttonStyle(SocleButtonStyle(.secondary)).fixedSize()
+                }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity).soclePanel()
         } else {
@@ -414,7 +419,7 @@ struct CampaignPicker: View {
                 }
             }
             Divider()
-            Button(L.t("campaign.add")) { store.addCampaign() }
+            Button(L.t("campaign.add")) { store.wizard = true }
             Button(L.t("campaign.edit")) { ui.editingCampaign = true }.disabled(!store.hasCampaign)
             Button(L.t("campaign.remove")) { removing = store.campaign }.disabled(!store.hasCampaign)
             Divider()
