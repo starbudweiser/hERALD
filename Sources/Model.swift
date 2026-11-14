@@ -92,6 +92,8 @@ struct Post: Codable, Identifiable, Hashable {
     var agent: AgentThread?
     /// Publication sans lien à relever (dossier de presse, message Discord…) : jamais signalée « publiée sans lien ».
     var noLink: Bool?
+    /// Rangée hors de la liste courante (publiée, sans lien relevé ni retour) ; jamais supprimée.
+    var archived: Bool?
 
     func draft(_ l: Lang) -> String { drafts[l.rawValue] ?? "" }
     var unreadFeedback: Int { feedback.filter { $0.unread == true }.count }

@@ -4,19 +4,33 @@ import SwiftUI
 struct PostsView: View {
     @EnvironmentObject var store: Store
     @EnvironmentObject var ui: UIState
-    @State private var filter: PostStatus?
+    enum Scope: String, CaseIterable { case todo, published, archived, all }
+    @State private var scope: Scope = .todo
     @State private var channel: UUID?
+    @State private var tidying = false
 
+    private func inScope(_ p: Post) -> Bool {
+        switch scope {
+        case .todo: return p.status != .published
+        case .published: return p.status == .published && p.archived != true
+        case .archived: return p.archived == true
+        case .all: return true
+        }
+    }
     private var rows: [Post] {
-        store.posts.filter { (filter == nil || $0.status == filter) && (channel == nil || $0.channelID == channel) && ui.matches($0, store) }
+        store.posts.filter { inScope($0) && (channel == nil || $0.channelID == channel) && ui.matches($0, store) }
     }
 
     var body: some View {
         SplitLayout(width: 480) {
             HStack(spacing: Socle.M.space2) {
-                SocleSegmented(options: [nil] + PostStatus.allCases.map { Optional($0) }, selection: filter,
-                               label: { s in s?.label ?? L.t("filter.all", store.posts.count) }, onSelect: { filter = $0 })
+                SocleSegmented(options: Scope.allCases, selection: scope, label: { L.t("scope.\($0.rawValue)") }, onSelect: { scope = $0 })
                 Spacer(minLength: 0)
+                if !store.tidyable.isEmpty {
+                    Button { tidying = true } label: { Image(systemName: "archivebox") }
+                        .buttonStyle(.plain).foregroundStyle(Socle.C.textMuted)
+                        .help(L.t("tidy.button", store.tidyable.count)).accessibilityLabel(L.t("tidy.button", store.tidyable.count))
+                }
                 Menu {
                     Button { channel = nil } label: { if channel == nil { Label(L.t("filter.channels"), systemImage: "checkmark") } else { Text(L.t("filter.channels")) } }
                     Divider()
@@ -31,7 +45,18 @@ struct PostsView: View {
                 .accessibilityLabel(L.t("col.channel")).help(L.t("col.channel"))
             }
             .padding(Socle.M.space3)
+            .confirmationDialog(L.t("tidy.confirm", store.tidyable.count), isPresented: $tidying) {
+                Button(L.t("tidy.action")) {
+                    let ids = Set(store.tidyable.map(\.id))
+                    if let s = ui.selectedPost, ids.contains(s) { ui.selectedPost = nil }
+                    store.setArchived(ids, true)
+                }
+            } message: { Text(L.t("tidy.msg")) }
             Divider().overlay(Socle.C.borderSubtle)
+            if rows.isEmpty, scope == .todo || scope == .archived {
+                Text(L.t(scope == .todo ? "tidy.empty.todo" : "tidy.empty.archived")).socle(Socle.T.body).foregroundStyle(Socle.C.textSubtle)
+                    .multilineTextAlignment(.center).padding(Socle.M.space6).frame(maxWidth: .infinity)
+            }
             ForEach(rows) { p in
                 ItemRow(selected: p.id == ui.selectedPost, symbol: store.channel(p.channelID)?.kind.symbol ?? "megaphone",
                         title: p.title, meta: L.day(p.date), metaColor: late(p) ? Socle.C.danger : Socle.C.textSubtle,
@@ -255,6 +280,14 @@ private struct PostDeleteMenu: ViewModifier {
     func body(content: Content) -> some View {
         content
             .contextMenu {
+                if post.archived == true {
+                    Button(L.t("tidy.undo")) { store.setArchived([post.id], false) }
+                } else if post.status == .published {
+                    Button(L.t("tidy.one")) {
+                        if ui.selectedPost == post.id { ui.selectedPost = nil }
+                        store.setArchived([post.id], true)
+                    }
+                }
                 Button(L.t("post.remove"), role: .destructive) { asking = true }
             }
             .confirmationDialog(L.t("post.remove.confirm", post.title), isPresented: $asking) {

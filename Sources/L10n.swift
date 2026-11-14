@@ -644,6 +644,18 @@ enum L {
         "wr.translate": "Traduire depuis %@",
         "wr.needagent": "L'assistant utilise l'agent IA : activez-le dans les Réglages.",
         "wr.session": "rédaction",
+        "scope.todo": "À faire",
+        "scope.published": "Publiées",
+        "scope.archived": "Rangées",
+        "scope.all": "Toutes",
+        "tidy.button": "Ranger les terminées (%d)",
+        "tidy.confirm": "Ranger %d publication(s) ?",
+        "tidy.action": "Ranger",
+        "tidy.msg": "Publiées, sans lien relevé ni retour : elles quittent la liste mais restent dans « Rangées ». Rien n'est supprimé.",
+        "tidy.one": "Ranger cette publication",
+        "tidy.undo": "Remettre dans la liste",
+        "tidy.empty.todo": "Rien à faire : tout est publié. Les publications publiées sont dans « Publiées ».",
+        "tidy.empty.archived": "Aucune publication rangée.",
     ]
 
     private static let en: [String: String] = [
@@ -1270,6 +1282,18 @@ enum L {
         "wr.translate": "Translate from %@",
         "wr.needagent": "The assistant uses the AI agent: turn it on in Settings.",
         "wr.session": "drafting",
+        "scope.todo": "To do",
+        "scope.published": "Published",
+        "scope.archived": "Tidied away",
+        "scope.all": "All",
+        "tidy.button": "Tidy away finished (%d)",
+        "tidy.confirm": "Tidy away %d post(s)?",
+        "tidy.action": "Tidy away",
+        "tidy.msg": "Published, with no tracked link and no feedback: they leave the list but stay under “Tidied away”. Nothing is deleted.",
+        "tidy.one": "Tidy away this post",
+        "tidy.undo": "Put back in the list",
+        "tidy.empty.todo": "Nothing to do: everything is published. Published posts are under “Published”.",
+        "tidy.empty.archived": "No tidied-away posts.",
     ]
 
     private static let es: [String: String] = [
@@ -1896,6 +1920,18 @@ enum L {
         "wr.translate": "Traducir desde %@",
         "wr.needagent": "El asistente usa el agente de IA: actívalo en Ajustes.",
         "wr.session": "redacción",
+        "scope.todo": "Por hacer",
+        "scope.published": "Publicadas",
+        "scope.archived": "Archivadas",
+        "scope.all": "Todas",
+        "tidy.button": "Archivar terminadas (%d)",
+        "tidy.confirm": "¿Archivar %d publicación(es)?",
+        "tidy.action": "Archivar",
+        "tidy.msg": "Publicadas, sin enlace seguido ni respuestas: salen de la lista pero siguen en «Archivadas». No se borra nada.",
+        "tidy.one": "Archivar esta publicación",
+        "tidy.undo": "Volver a la lista",
+        "tidy.empty.todo": "Nada por hacer: todo está publicado. Las publicadas están en «Publicadas».",
+        "tidy.empty.archived": "Ninguna publicación archivada.",
     ]
 
     private static let it: [String: String] = [
@@ -2522,5 +2558,17 @@ enum L {
         "wr.translate": "Traduci da %@",
         "wr.needagent": "L'assistente usa l'agente IA: attivalo nelle Impostazioni.",
         "wr.session": "stesura",
+        "scope.todo": "Da fare",
+        "scope.published": "Pubblicati",
+        "scope.archived": "Archiviati",
+        "scope.all": "Tutti",
+        "tidy.button": "Archivia concluse (%d)",
+        "tidy.confirm": "Archiviare %d post?",
+        "tidy.action": "Archivia",
+        "tidy.msg": "Pubblicati, senza link monitorato né riscontri: escono dall'elenco ma restano in «Archiviati». Non si cancella nulla.",
+        "tidy.one": "Archivia questo post",
+        "tidy.undo": "Rimetti nell'elenco",
+        "tidy.empty.todo": "Niente da fare: tutto è pubblicato. I post pubblicati sono in «Pubblicati».",
+        "tidy.empty.archived": "Nessun post archiviato.",
     ]
 }

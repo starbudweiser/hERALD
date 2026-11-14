@@ -144,6 +144,16 @@ final class Store: ObservableObject {
         return p.id
     }
 
+    /// Publiée sans rien à écouter : pas de lien relevé automatiquement, ni retour, ni chiffres.
+    func isTidyable(_ p: Post) -> Bool {
+        p.status == .published && p.archived != true && p.feedback.isEmpty && (p.stats ?? []).isEmpty
+            && !(!p.link.isEmpty && platform(p).automatic)
+    }
+    var tidyable: [Post] { campaign.posts.filter(isTidyable) }
+    func setArchived(_ ids: Set<UUID>, _ on: Bool) {
+        for i in campaign.posts.indices where ids.contains(campaign.posts[i].id) { campaign.posts[i].archived = on ? true : nil }
+    }
+
     func removePost(_ id: UUID) { campaign.posts.removeAll { $0.id == id } }
 
     /// Mots qui désignent nos applis dans un fil collectif Reddit : noms des applis suivies, du kit, du compte.
