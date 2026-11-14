@@ -3,10 +3,11 @@ import SwiftUI
 
 /// Entrées de la barre latérale qui ouvrent une vue.
 enum Tab: String, CaseIterable {
-    case today, calendar, posts, contacts, stats, feedback, watch, oma, channels, browser, platform
+    case guide, today, calendar, posts, contacts, stats, feedback, watch, oma, channels, browser, platform
 
     var symbol: String {
         switch self {
+        case .guide: "flag"
         case .today: "sun.max"
         case .calendar: "calendar"
         case .posts: "doc.text"
@@ -22,14 +23,21 @@ enum Tab: String, CaseIterable {
     }
     var title: String { L.t("tab.\(rawValue)") }
     /// Vues qui montrent la campagne choisie (les autres fonctionnent sans campagne).
-    var needsCampaign: Bool { [.today, .calendar, .posts, .contacts, .stats, .feedback, .platform].contains(self) }
+    var needsCampaign: Bool { [.guide, .today, .calendar, .posts, .contacts, .stats, .feedback, .platform].contains(self) }
 }
 
 /// État de l'interface (vue affichée, sélections, recherche, fenêtres) ; rien ici n'est enregistré dans le plan.
 @MainActor
 final class UIState: ObservableObject {
     /// HERALD_TAB : vue d'ouverture pour les essais (ex. « oma »).
-    @Published var tab: Tab = Tab(rawValue: ProcessInfo.processInfo.environment["HERALD_TAB"] ?? "") ?? .today { didSet { if tab != oldValue { query = ""; workspace = nil; if tab == .browser { browserOpen = false } } } }
+    /// Mode guidé (barre latérale réduite, écran « Ma campagne ») ou avancé ; mémorisé entre les lancements.
+    @Published var guided: Bool = UserDefaults.standard.object(forKey: "herald.guided") as? Bool ?? true {
+        didSet {
+            UserDefaults.standard.set(guided, forKey: "herald.guided")
+            if guided { if ![Tab.guide, .feedback, .browser].contains(tab) { tab = .guide } } else if tab == .guide { tab = .today }
+        }
+    }
+    @Published var tab: Tab = Tab(rawValue: ProcessInfo.processInfo.environment["HERALD_TAB"] ?? "") ?? (UserDefaults.standard.object(forKey: "herald.guided") as? Bool ?? true ? .guide : .today) { didSet { if tab != oldValue { query = ""; workspace = nil; if tab == .browser { browserOpen = false } } } }
     /// Espace de publication ouvert (navigateur + panneau), ou nil.
     @Published var workspace: Workspace?
     @Published var selectedPost: UUID?
@@ -150,6 +158,7 @@ struct RootView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity).soclePanel()
         } else {
             switch ui.tab {
+            case .guide: GuideView()
             case .today: TodayView()
             case .calendar: CalendarView(selectedPost: $ui.selectedPost, tab: $ui.tab).soclePanel()
             case .posts: PostsView()
@@ -168,6 +177,8 @@ struct RootView: View {
     private func spec(_ t: Tab) -> HeaderSpec {
         let title = t.title, sub = L.t("head.\(t.rawValue)")
         switch t {
+        case .guide:
+            return HeaderSpec(title: title, subtitle: sub, searchable: false, primary: nil)
         case .today, .calendar, .posts:
             return HeaderSpec(title: title, subtitle: sub, searchable: true,
                               primary: store.hasCampaign ? (L.t("post.add"), { ui.selectedPost = store.addPost(); ui.tab = .posts }) : nil)
@@ -237,6 +248,15 @@ struct Sidebar: View {
     @EnvironmentObject var ui: UIState
     @AppStorage(AgentConfig.key) private var agentRaw = Data()
     @State private var removing: Campaign?
+    @State private var advancedOpen = false
+
+    @ViewBuilder private var advancedGroups: some View {
+        group("side.group.campaign", [.today, .calendar, .posts])
+        group("side.group.outreach", [.contacts])
+        group("side.group.results", [.stats, .feedback, .watch])
+        groupPlatforms
+        groupTools
+    }
 
     private var agentOn: Bool { AgentConfig.isEnabled(agentRaw) }
 
@@ -247,11 +267,18 @@ struct Sidebar: View {
             CampaignPicker(removing: $removing).padding(.horizontal, 8).padding(.bottom, 6)
             ScrollView {
                 VStack(alignment: .leading, spacing: 2) {
-                    group("side.group.campaign", [.today, .calendar, .posts])
-                    group("side.group.outreach", [.contacts])
-                    group("side.group.results", [.stats, .feedback, .watch])
-                    groupPlatforms
-                    groupTools
+                    if ui.guided {
+                        SidebarRow(symbol: Tab.guide.symbol, title: Tab.guide.title, count: store.todoCount, selected: ui.tab == .guide && !(store.agentOpen && agentOn)) { ui.tab = .guide }
+                        SidebarRow(symbol: Tab.feedback.symbol, title: L.t("side.feedbackstats"), count: store.unreadFeedback, selected: ui.tab == .feedback && !(store.agentOpen && agentOn)) { ui.tab = .feedback }
+                        DisclosureGroup(isExpanded: $advancedOpen) {
+                            VStack(alignment: .leading, spacing: 2) { advancedGroups }
+                        } label: {
+                            Text(L.t("side.advanced")).socle(Socle.T.meta).foregroundStyle(Socle.C.textSubtle)
+                        }
+                        .padding(.horizontal, 8).padding(.top, 14)
+                    } else {
+                        advancedGroups
+                    }
                 }
                 .padding(.horizontal, 8)
             }
@@ -338,6 +365,7 @@ struct Sidebar: View {
     private var footer: some View {
         VStack(alignment: .leading, spacing: 8) {
             VStack(alignment: .leading, spacing: 2) {
+                SidebarRow(symbol: "slider.horizontal.3", title: L.t(ui.guided ? "mode.advanced" : "mode.guided"), count: 0, selected: false) { ui.guided.toggle() }
                 SidebarRow(symbol: "gearshape", title: L.t("settings.title"), count: 0, selected: false) { ui.showSettings = true }
                 SidebarRow(symbol: "info.circle", title: L.t("side.about", "hERALD"), count: 0, selected: false) { About.show() }
             }
