@@ -716,6 +716,18 @@ enum L {
         "gp.nolink": "Pas de lien à relever",
         "gp.finish": "Terminer",
         "gp.back": "Retour",
+        "guide.tasks": "À suivre",
+        "guide.tasks.sub": "%d tâche(s) sans texte à publier",
+        "guide.update": "Mettre à jour",
+        "task.is": "C'est une tâche de suivi : aucun texte à publier",
+        "task.notes": "Où ça en est",
+        "task.paste": "Collez ici la réponse reçue (e-mail, message…)",
+        "task.read": "Faire lire par l'assistant",
+        "task.add": "Ajouter à la tâche",
+        "task.done": "Marquer terminée",
+        "task.result": "Résumé proposé, à relire avant d'enregistrer",
+        "task.saved": "Enregistré le %@",
+        "task.needagent": "L'assistant utilise l'agent IA : activez-le dans les Réglages. Vous pouvez aussi ajouter le texte tel quel.",
     ]
 
     private static let en: [String: String] = [
@@ -1414,6 +1426,18 @@ enum L {
         "gp.nolink": "No link to track",
         "gp.finish": "Finish",
         "gp.back": "Back",
+        "guide.tasks": "To follow up",
+        "guide.tasks.sub": "%d task(s) with no text to post",
+        "guide.update": "Update",
+        "task.is": "This is a follow-up task: no text to post",
+        "task.notes": "Where it stands",
+        "task.paste": "Paste the reply you received here (email, message…)",
+        "task.read": "Have the assistant read it",
+        "task.add": "Add to the task",
+        "task.done": "Mark as done",
+        "task.result": "Suggested summary, review before saving",
+        "task.saved": "Saved on %@",
+        "task.needagent": "The assistant uses the AI agent: turn it on in Settings. You can also add the text as is.",
     ]
 
     private static let es: [String: String] = [
@@ -2112,6 +2136,18 @@ enum L {
         "gp.nolink": "Sin enlace que seguir",
         "gp.finish": "Terminar",
         "gp.back": "Atrás",
+        "guide.tasks": "Por seguir",
+        "guide.tasks.sub": "%d tarea(s) sin texto que publicar",
+        "guide.update": "Actualizar",
+        "task.is": "Es una tarea de seguimiento: sin texto que publicar",
+        "task.notes": "Cómo va",
+        "task.paste": "Pega aquí la respuesta recibida (correo, mensaje…)",
+        "task.read": "Que lo lea el asistente",
+        "task.add": "Añadir a la tarea",
+        "task.done": "Marcar como terminada",
+        "task.result": "Resumen propuesto, revísalo antes de guardar",
+        "task.saved": "Guardado el %@",
+        "task.needagent": "El asistente usa el agente de IA: actívalo en Ajustes. También puedes añadir el texto tal cual.",
     ]
 
     private static let it: [String: String] = [
@@ -2810,5 +2846,17 @@ enum L {
         "gp.nolink": "Nessun link da seguire",
         "gp.finish": "Fine",
         "gp.back": "Indietro",
+        "guide.tasks": "Da seguire",
+        "guide.tasks.sub": "%d attività senza testo da pubblicare",
+        "guide.update": "Aggiorna",
+        "task.is": "È un'attività di follow-up: nessun testo da pubblicare",
+        "task.notes": "A che punto è",
+        "task.paste": "Incolla qui la risposta ricevuta (e-mail, messaggio…)",
+        "task.read": "Fai leggere all'assistente",
+        "task.add": "Aggiungi all'attività",
+        "task.done": "Segna come conclusa",
+        "task.result": "Riepilogo proposto, rivedilo prima di salvare",
+        "task.saved": "Salvato il %@",
+        "task.needagent": "L'assistente usa l'agente IA: attivalo nelle Impostazioni. Puoi anche aggiungere il testo così com'è.",
     ]
 }

@@ -234,6 +234,8 @@ struct PostInspector: View {
                         ForEach(store.campaign.milestones) { Text("\(L.day($0.date)) · \($0.title)").tag(Optional($0.id)) }
                     }.labelsHidden()
                 }
+                Toggle(L.t("task.is"), isOn: Binding(get: { post.wrappedValue.isTask }, set: { post.wrappedValue.task = $0 }))
+                    .toggleStyle(.checkbox)
                 Field(label: L.t("col.notes")) {
                     TextEditor(text: post.notes).socle(Socle.T.body).socleField(multiline: true).frame(height: 140)
                 }

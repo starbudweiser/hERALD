@@ -10,9 +10,11 @@ struct GuideView: View {
     @EnvironmentObject var ui: UIState
     @State private var openStep: Int?
     @State private var target: GuideTarget?
+    @State private var taskTarget: UUID?
 
     private func hasText(_ p: Post) -> Bool { Lang.allCases.contains { !p.draft($0).trimmingCharacters(in: .whitespacesAndNewlines).isEmpty } }
-    private var open: [Post] { store.posts.filter { $0.status != .published && $0.archived != true } }
+    private var open: [Post] { store.posts.filter { $0.status != .published && $0.archived != true && !$0.isTask } }
+    private var tasks: [Post] { store.posts.filter { $0.status != .published && $0.archived != true && $0.isTask } }
     private var noText: [Post] { open.filter { !hasText($0) } }
     private var published: [Post] { store.posts.filter { $0.status == .published && $0.archived != true } }
     private var noLink: [Post] { published.filter { $0.link.isEmpty && $0.noLink != true && $0.feedback.isEmpty } }
@@ -26,12 +28,14 @@ struct GuideView: View {
                 header
                 step(1, L.t("guide.s1"), L.t("guide.s1.sub", open.count - noText.count, open.count), done: noText.isEmpty) { s1 }
                 step(2, L.t("guide.s2"), L.t("guide.s2.sub", published.count, published.count + open.count), done: open.isEmpty) { s2 }
+                if !tasks.isEmpty { step(4, L.t("guide.tasks"), L.t("guide.tasks.sub", tasks.count), done: false) { s4 } }
                 step(3, L.t("guide.s3"), published.isEmpty ? L.t("guide.s3.off") : L.t("guide.s3.sub", published.count), done: false, off: published.isEmpty) { s3 }
             }
             .padding(Socle.M.space4).frame(maxWidth: 760).frame(maxWidth: .infinity)
         }
         .soclePanel()
         .sheet(item: $target) { t in GuidedPostSheet(id: t.id, step: t.step).environmentObject(store).environmentObject(ui) }
+        .sheet(item: Binding(get: { taskTarget.map { EntryID(id: $0) } }, set: { taskTarget = $0?.id })) { e in TaskSheet(id: e.id).environmentObject(store) }
     }
 
     private var header: some View {
@@ -56,6 +60,7 @@ struct GuideView: View {
                     ZStack {
                         Circle().fill(done ? Socle.C.success.opacity(0.25) : Socle.C.accentFill.opacity(off ? 0.4 : 1)).frame(width: 24, height: 24)
                         if done { Image(systemName: "checkmark").font(.system(size: 11, weight: .bold)).foregroundStyle(Socle.C.success) }
+                        else if n == 4 { Image(systemName: "checklist").font(.system(size: 11, weight: .bold)).foregroundStyle(Socle.C.onAccentFill) }
                         else { Text("\(n)").socle(Socle.T.labelStrong).foregroundStyle(Socle.C.onAccentFill) }
                     }
                     Text(title).socle(Socle.T.heading).foregroundStyle(Socle.C.textStrong)
@@ -100,6 +105,23 @@ struct GuideView: View {
         }
         more(open.count)
     }
+    @ViewBuilder private var s4: some View {
+        ForEach(tasks.prefix(6)) { p in
+            HStack(spacing: Socle.M.space3) {
+                Image(systemName: "checklist").frame(width: 20).foregroundStyle(Socle.C.textMuted)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(p.title).socle(Socle.T.body).foregroundStyle(Socle.C.textStrong).lineLimit(1)
+                    Text(L.day(p.date)).socle(Socle.T.meta).foregroundStyle(Calendar.current.startOfDay(for: p.date) < Calendar.current.startOfDay(for: Date()) ? Socle.C.danger : Socle.C.textSubtle)
+                }
+                Spacer(minLength: 8)
+                Button(L.t("guide.update")) { taskTarget = p.id }
+                    .buttonStyle(SocleButtonStyle(.secondary, height: Socle.M.sizeControl)).fixedSize()
+            }
+            .padding(.vertical, 6)
+            .overlay(alignment: .top) { Divider().overlay(Socle.C.borderSubtle) }
+        }
+    }
+
     @ViewBuilder private var s3: some View {
         if unread > 0 {
             HStack {
@@ -229,5 +251,100 @@ struct GuidedPostSheet: View {
                 Button(L.t("gp.finish")) { dismiss() }.buttonStyle(SocleButtonStyle(.primary, height: Socle.M.sizeControlLg)).fixedSize()
             }
         }
+    }
+}
+
+
+/// Une tâche de suivi (réponse attendue, relance…) : on y colle ce qu'on a reçu, l'assistant le lit et met la tâche à jour.
+struct TaskSheet: View {
+    @EnvironmentObject var store: Store
+    @Environment(\.dismiss) private var dismiss
+    @AppStorage(AgentConfig.key) private var agentRaw = Data()
+    let id: UUID
+    @State private var pasted = ""
+    @State private var proposal = ""
+    @State private var finished = false
+    @State private var busy = false
+    @State private var failure: String?
+
+    private var post: Binding<Post> { Binding(get: { store.post(id) ?? Post() }, set: { store.update($0) }) }
+
+    var body: some View {
+        let ready = AgentConfig.isEnabled(agentRaw) && AgentConfig.current.isReady
+        VStack(alignment: .leading, spacing: Socle.M.space3) {
+            HStack {
+                Text(post.wrappedValue.title).socle(Socle.T.heading).foregroundStyle(Socle.C.textStrong).lineLimit(2)
+                Spacer()
+                Button(L.t("publish.close")) { dismiss() }.buttonStyle(SocleButtonStyle(.secondary)).fixedSize().keyboardShortcut(.cancelAction)
+            }
+            Field(label: L.t("task.notes")) {
+                TextEditor(text: post.notes).socle(Socle.T.body).socleField(multiline: true).frame(height: 130)
+            }
+            Field(label: L.t("task.paste")) {
+                TextEditor(text: $pasted).socle(Socle.T.body).socleField(multiline: true).frame(height: 110)
+            }
+            HStack(spacing: Socle.M.space2) {
+                Button(L.t("task.read")) { Task { await read() } }
+                    .buttonStyle(SocleButtonStyle(.primary)).fixedSize().disabled(busy || !ready || pasted.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                Button(L.t("task.add")) { append(pasted) }
+                    .buttonStyle(SocleButtonStyle(.secondary)).fixedSize().disabled(pasted.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                if busy { ProgressView().controlSize(.small) }
+            }
+            if !ready { Callout(kind: .info, text: L.t("task.needagent")) }
+            if let failure { Callout(kind: .warning, text: failure) }
+            if !proposal.isEmpty {
+                Field(label: L.t("task.result")) {
+                    TextEditor(text: $proposal).socle(Socle.T.body).socleField(multiline: true).frame(height: 100)
+                }
+                Toggle(L.t("task.done"), isOn: $finished).toggleStyle(.checkbox)
+                Button(L.t("task.add")) { append(proposal); if finished { post.wrappedValue.status = .published }; proposal = ""; pasted = "" }
+                    .buttonStyle(SocleButtonStyle(.primary, height: Socle.M.sizeControlLg)).fixedSize()
+            }
+            HStack {
+                Button(L.t("task.done")) { post.wrappedValue.status = .published; dismiss() }
+                    .buttonStyle(SocleButtonStyle(.secondary)).fixedSize()
+                Spacer()
+            }
+        }
+        .padding(Socle.M.space5).frame(width: 620)
+        .background(Socle.C.bg)
+    }
+
+    /// Ajoute une entrée datée à la note de la tâche.
+    private func append(_ text: String) {
+        let t = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !t.isEmpty else { return }
+        var p = post.wrappedValue
+        p.notes += (p.notes.isEmpty ? "" : "\n\n") + "[\(L.t("task.saved", L.stamp(Date())))]\n" + t
+        post.wrappedValue = p
+        pasted = ""
+    }
+
+    private func read() async {
+        busy = true; failure = nil
+        defer { busy = false }
+        let names = ["fr": "français", "en": "English", "es": "español", "it": "italiano"]
+        let system = "You update a follow-up task in a communication-plan tool. Use ONLY the task note and the pasted message; never invent anything. Do not run commands or use tools."
+        let prompt = """
+        Tâche : \(post.wrappedValue.title)
+        Note actuelle :
+        \(post.wrappedValue.notes)
+
+        Message reçu :
+        \(pasted)
+
+        Réponds en \(names[L.lang] ?? "English"), en texte brut : 1) ce que dit le message, en une ou deux phrases ; 2) ce que cela change pour la tâche ; \
+        3) la prochaine action concrète, s'il y en a une. Termine par une dernière ligne exactement « TERMINÉE: oui » si la tâche est réglée, sinon « TERMINÉE: non ».
+        """
+        do {
+            let out = try await AgentRunner.oneShot(AgentConfig.current, name: L.t("guide.update"), system: system, prompt: prompt)
+            var lines = out.trimmingCharacters(in: .whitespacesAndNewlines).components(separatedBy: "\n")
+            if let last = lines.last, last.uppercased().contains("TERMIN") {
+                finished = last.lowercased().contains("oui") || last.lowercased().contains("yes")
+                lines.removeLast()
+            }
+            proposal = lines.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+        } catch let e as AgentFailure { failure = e.message }
+        catch { failure = error.localizedDescription }
     }
 }
