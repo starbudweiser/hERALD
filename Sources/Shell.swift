@@ -365,7 +365,7 @@ struct Sidebar: View {
     private var footer: some View {
         VStack(alignment: .leading, spacing: 8) {
             VStack(alignment: .leading, spacing: 2) {
-                SidebarRow(symbol: "slider.horizontal.3", title: L.t(ui.guided ? "mode.advanced" : "mode.guided"), count: 0, selected: false) { ui.guided.toggle() }
+                SidebarRow(symbol: "slider.horizontal.3", title: L.t(ui.guided ? "mode.advanced" : "mode.guided"), count: 0, selected: false, accent: true) { ui.guided.toggle() }
                 SidebarRow(symbol: "gearshape", title: L.t("settings.title"), count: 0, selected: false) { ui.showSettings = true }
                 SidebarRow(symbol: "info.circle", title: L.t("side.about", "hERALD"), count: 0, selected: false) { About.show() }
             }
@@ -405,6 +405,8 @@ struct SidebarRow: View {
     let count: Int
     let selected: Bool
     var key: KeyEquivalent?
+    /// Entrée mise en avant, en couleur (bleu Socle), comme le basculement de mode.
+    var accent = false
     let action: () -> Void
     @State private var hover = false
 
@@ -412,9 +414,9 @@ struct SidebarRow: View {
         Button(action: action) {
             HStack(spacing: 8) {
                 Image(systemName: symbol).font(.system(size: 13)).frame(width: 18)
-                    .foregroundStyle(selected ? Color.white : Socle.C.textMuted).accessibilityHidden(true)
+                    .foregroundStyle(accent ? Socle.C.onAccentFill : (selected ? Color.white : Socle.C.textMuted)).accessibilityHidden(true)
                 Text(title).socle(Socle.T.label).lineLimit(1)
-                    .foregroundStyle(selected ? Color.white : Socle.C.text)
+                    .foregroundStyle(accent ? Socle.C.onAccentFill : (selected ? Color.white : Socle.C.text))
                 Spacer(minLength: 4)
                 if count > 0 {
                     Text(L.number(count)).socle(Socle.T.caption).fontWeight(.semibold).foregroundStyle(.white)
@@ -423,7 +425,7 @@ struct SidebarRow: View {
                 }
             }
             .padding(.horizontal, 8).frame(height: 32)
-            .background(selected ? Socle.C.control : hover ? Socle.C.surfaceHover : .clear, in: RoundedRectangle(cornerRadius: 6))
+            .background(accent ? Socle.C.accentFill.opacity(hover ? 0.9 : 1) : selected ? Socle.C.control : hover ? Socle.C.surfaceHover : .clear, in: RoundedRectangle(cornerRadius: 6))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
