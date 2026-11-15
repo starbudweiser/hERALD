@@ -44,7 +44,7 @@ enum Treg {
         return await call("scrapecreators.x.v1-reddit-post-comments", ["url": url]).flatMap { j, _ in
             guard let o = j as? [String: Any], let post = o["post"] as? [String: Any] else { return .failure(WatchError(message: L.t("watch.parse"))) }
             let op = post["author"] as? String ?? ""
-            let community = RedditScope.isCommunityThread(op: op, title: post["title"] as? String ?? "", stickied: post["stickied"] as? Bool ?? false)
+            let community = url.lowercased().contains("megathread") || RedditScope.isCommunityThread(op: op, title: post["title"] as? String ?? "", stickied: post["stickied"] as? Bool ?? false)
             let snap = StatSnapshot(likes: StatsFetcher.int(post["score"]), comments: StatsFetcher.int(post["num_comments"]),
                                     shares: StatsFetcher.int(post["num_crossposts"]))
             var out: [Feedback] = []

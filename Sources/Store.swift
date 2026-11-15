@@ -174,6 +174,21 @@ final class Store: ObservableObject {
         return k
     }
 
+    /// Au lancement, sans réseau : dans les fils collectifs (lien « megathread »), ne garde que les commentaires relevés qui citent nos applis.
+    func purgeCommunityRepliesNow() {
+        let kw = replyKeywords
+        for ci in data.campaigns.indices {
+            for pi in data.campaigns[ci].posts.indices {
+                var p = data.campaigns[ci].posts[pi]
+                guard p.link.lowercased().contains("megathread"), !p.feedback.isEmpty else { continue }
+                let keep = p.feedback.filter { $0.source?.hasPrefix("reddit:") == true && RedditScope.mentions($0.text, kw) }
+                let before = p.feedback.count
+                Self.purgeForeignReplies(&p, keeping: keep)
+                if p.feedback.count != before { data.campaigns[ci].posts[pi] = p }
+            }
+        }
+    }
+
     /// Fil collectif : retire les commentaires relevés plus tôt qui ne nous concernent pas (jamais ceux saisis à la main).
     static func purgeForeignReplies(_ p: inout Post, keeping kept: [Feedback]) {
         let keep = Set(kept.compactMap(\.source))
@@ -334,6 +349,7 @@ final class Store: ObservableObject {
         t.tolerance = 120   // le système regroupe les réveils (économie d'énergie en arrière-plan)
         RunLoop.main.add(t, forMode: .common)
         statsTimer = t
+        purgeCommunityRepliesNow()
         Task { await refreshStatsIfDue(); await refreshOMAIfDue(); autoScanRepliesIfDue(); await refreshKeywordWatchIfDue(); await refreshVersionWatchIfDue() }
     }
 
