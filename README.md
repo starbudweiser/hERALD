@@ -12,6 +12,8 @@
 
 **hERALD** is a free, open-source macOS app (MIT License) by starbudweiser, written with the help of Claude Code (Anthropic). It plans communication campaigns for modders: it prepares texts, tracks posts and outreach, and never publishes anything itself. Use *About hERALD* in the app menu for the version and credits. Updates are found automatically in this repository's releases (signature checked, installed only when nothing is running; can be switched off in Settings).
 
+hERALD is part of the **DESKTOP MAC TOOLKIT**, Starbudweiser's collection of macOS apps.
+
 ## Features
 
 **Golden rule:** hERALD prepares and tracks. It never publishes: you copy the text and post it yourself. It only sends an outreach email when you click *Send*, after a confirmation, through your Mail app.
