@@ -14,6 +14,8 @@
 
 hERALD is part of the **DESKTOP MAC TOOLKIT**, Starbudweiser's collection of macOS apps.
 
+![The main window showing a sample mod-launch campaign with twelve planned posts.](docs/screenshot.png)
+
 ## Features
 
 **Golden rule:** hERALD prepares and tracks. It never publishes: you copy the text and post it yourself. It only sends an outreach email when you click *Send*, after a confirmation, through your Mail app.
