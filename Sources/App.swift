@@ -16,7 +16,7 @@ struct HeraldApp: App {
                 .environmentObject(ui)
                 .task {
                     store.startInbox(); store.startStats()
-                    Updater.shared.start(busy: { store.statsChecking || store.checking || !store.agentBusy.isEmpty })
+                    if !Edition.isDev { Updater.shared.start(busy: { store.statsChecking || store.checking || !store.agentBusy.isEmpty }) }
                     await store.checkIfStale()
                 }
         }

@@ -302,12 +302,17 @@ struct AppData: Codable {
     var platforms: [String]?
 }
 
+enum Edition {
+    /// Version de développement (« hERALD Dev », fr.stephan.herald.dev) : données à part, pas de mise à jour automatique.
+    static let isDev = Bundle.main.bundleIdentifier?.hasSuffix(".dev") ?? false
+}
+
 enum Storage {
     static let dir: URL = {
         // HERALD_DATA_DIR : dossier de données de remplacement (essais, sans toucher au plan réel).
         let d = ProcessInfo.processInfo.environment["HERALD_DATA_DIR"].map { URL(fileURLWithPath: $0, isDirectory: true) }
             ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-                .appendingPathComponent("hERALD", isDirectory: true)
+                .appendingPathComponent(Edition.isDev ? "hERALD Dev" : "hERALD", isDirectory: true)
         try? FileManager.default.createDirectory(at: d, withIntermediateDirectories: true)
         return d
     }()
