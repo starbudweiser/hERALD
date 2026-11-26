@@ -45,7 +45,7 @@ struct PostsView: View {
                 .accessibilityLabel(L.t("col.channel")).help(L.t("col.channel"))
             }
             .padding(Socle.M.space3)
-            .confirmationDialog(L.t("tidy.confirm", store.tidyable.count), isPresented: $tidying) {
+            .confirmationDialog(L.n("tidy.confirm", store.tidyable.count), isPresented: $tidying) {
                 Button(L.t("tidy.action")) {
                     let ids = Set(store.tidyable.map(\.id))
                     if let s = ui.selectedPost, ids.contains(s) { ui.selectedPost = nil }
@@ -53,9 +53,15 @@ struct PostsView: View {
                 }
             } message: { Text(L.t("tidy.msg")) }
             Divider().overlay(Socle.C.borderSubtle)
-            if rows.isEmpty, scope == .todo || scope == .archived {
-                Text(L.t(scope == .todo ? "tidy.empty.todo" : "tidy.empty.archived")).socle(Socle.T.body).foregroundStyle(Socle.C.textSubtle)
-                    .multilineTextAlignment(.center).padding(Socle.M.space6).frame(maxWidth: .infinity)
+            if rows.isEmpty {
+                if !ui.query.trimmingCharacters(in: .whitespaces).isEmpty || channel != nil {
+                    ListEmpty(text: L.t("list.empty.filtered")) { ui.query = ""; channel = nil }
+                } else if scope == .todo || scope == .archived {
+                    Text(L.t(scope == .todo ? "tidy.empty.todo" : "tidy.empty.archived")).socle(Socle.T.body).foregroundStyle(Socle.C.textSubtle)
+                        .multilineTextAlignment(.center).padding(Socle.M.space6).frame(maxWidth: .infinity)
+                } else {
+                    ListEmpty(text: L.t("list.empty.posts"))
+                }
             }
             ForEach(rows) { p in
                 ItemRow(selected: p.id == ui.selectedPost, symbol: store.channel(p.channelID)?.kind.symbol ?? "megaphone",
@@ -113,6 +119,7 @@ struct PostInspector: View {
             footer
         }
         .padding(Socle.M.space4)
+        .fadeOnChange(id)
         .sheet(item: Binding(get: { manual.map { EntryID(id: $0) } }, set: { manual = $0?.id })) { e in
             ManualStatsSheet(postID: e.id).environmentObject(store)
         }
@@ -147,7 +154,7 @@ struct PostInspector: View {
             HStack(spacing: Socle.M.space2) {
                 SocleSegmented(options: Lang.allCases, selection: lang, label: { $0.label }, onSelect: { lang = $0 })
                 Spacer(minLength: 0)
-                Text(L.t("draft.chars", text.wrappedValue.count)).socle(Socle.T.meta).foregroundStyle(Socle.C.textSubtle).lineLimit(1)
+                Text(L.n("draft.chars", text.wrappedValue.count)).socle(Socle.T.meta).foregroundStyle(Socle.C.textSubtle).lineLimit(1)
             }
             if let n = store.channel(post.wrappedValue.channelID)?.notes, !n.isEmpty {
                 Text(n).socle(Socle.T.meta).foregroundStyle(Socle.C.textMuted).lineLimit(2)
@@ -199,7 +206,7 @@ struct PostInspector: View {
         let items = post.wrappedValue.feedback.sorted { $0.date > $1.date }
         return VStack(alignment: .leading, spacing: Socle.M.space2) {
             HStack {
-                Text(items.isEmpty ? L.t("feedback.none") : "\(items.count)")
+                Text(items.isEmpty ? L.t("feedback.none") : L.number(items.count))
                     .socle(Socle.T.meta).foregroundStyle(Socle.C.textSubtle)
                 Spacer()
                 Button(L.t("insp.feedback.open")) { ui.selectedPost = id; ui.tab = .feedback }
@@ -211,8 +218,9 @@ struct PostInspector: View {
                         HStack(alignment: .firstTextBaseline, spacing: Socle.M.space2) {
                             Text(L.day(f.date)).socle(Socle.T.meta).foregroundStyle(Socle.C.textSubtle).frame(width: 84, alignment: .leading)
                             Text(f.author.map { "u/\($0)" } ?? "\(f.kind.label) \(L.number(f.value))")
-                                .socle(Socle.T.labelStrong).foregroundStyle(Socle.C.textStrong).lineLimit(1).fixedSize()
-                            Text(f.text).socle(Socle.T.body).foregroundStyle(Socle.C.text).lineLimit(2)
+                                .socle(Socle.T.labelStrong).foregroundStyle(Socle.C.textStrong).lineLimit(1).truncationMode(.tail)
+                                .frame(maxWidth: 160, alignment: .leading).layoutPriority(1)
+                            Text(f.text).socle(Socle.T.body).foregroundStyle(Socle.C.text).lineLimit(2).truncationMode(.tail).help(f.text)
                             Spacer(minLength: 0)
                         }
                         .padding(.vertical, Socle.M.space1_5)

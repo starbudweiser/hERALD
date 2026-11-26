@@ -371,23 +371,26 @@ struct Sidebar: View {
             }
             Divider().overlay(Socle.C.border)
             let (done, total) = store.publishedCount
-            VStack(alignment: .leading, spacing: 6) {
-                HStack {
-                    Text(L.t("side.published", done, total)).socle(Socle.T.meta).foregroundStyle(Socle.C.textMuted).lineLimit(1)
-                    Spacer(minLength: 4)
+            // petit bloc de synthèse (compte + ligne + bouton) au pied de la barre : contenu centré
+            VStack(alignment: .center, spacing: 6) {
+                HStack(spacing: 6) {
+                    Text(L.t("side.published", L.number(done), L.number(total))).socle(Socle.T.meta).foregroundStyle(Socle.C.textMuted)
+                        .lineLimit(1).truncationMode(.tail).monospacedDigit()
                     Text(total == 0 ? "—" : "\(Int((Double(done) / Double(total) * 100).rounded())) %")
-                        .socle(Socle.T.meta).foregroundStyle(Socle.C.textStrong).lineLimit(1)
+                        .socle(Socle.T.meta).foregroundStyle(Socle.C.textStrong).lineLimit(1).fixedSize().monospacedDigit()
                 }
+                .frame(maxWidth: .infinity)
                 ProgressBar(value: total == 0 ? 0 : Double(done) / Double(total))
                 Button {
                     if store.inboxFiles > 0 { store.inboxFiles = 0; ui.showSettings = true } else { store.revealInbox() }
                 } label: {
                     HStack(spacing: 6) {
                         Circle().fill(store.inboxFiles > 0 ? Socle.C.warning : Socle.C.success).frame(width: 8, height: 8)
-                        Text(store.inboxFiles > 0 ? L.t("side.inbox.n", store.inboxFiles) : L.t("side.inbox.ok"))
-                            .socle(Socle.T.meta).foregroundStyle(store.inboxFiles > 0 ? Socle.C.warning : Socle.C.textMuted).lineLimit(1)
-                        Spacer(minLength: 0)
+                        Text(store.inboxFiles > 0 ? L.n("side.inbox.n", store.inboxFiles) : L.t("side.inbox.ok"))
+                            .socle(Socle.T.meta).foregroundStyle(store.inboxFiles > 0 ? Socle.C.warning : Socle.C.textMuted)
+                            .lineLimit(1).truncationMode(.tail).multilineTextAlignment(.center)
                     }
+                    .frame(maxWidth: .infinity)
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -409,23 +412,27 @@ struct SidebarRow: View {
     var accent = false
     let action: () -> Void
     @State private var hover = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         Button(action: action) {
             HStack(spacing: 8) {
                 Image(systemName: symbol).font(.system(size: 13)).frame(width: 18)
                     .foregroundStyle(accent ? Socle.C.onAccentFill : (selected ? Color.white : Socle.C.textMuted)).accessibilityHidden(true)
-                Text(title).socle(Socle.T.label).lineLimit(1)
+                Text(title).socle(Socle.T.label).lineLimit(1).truncationMode(.tail)
                     .foregroundStyle(accent ? Socle.C.onAccentFill : (selected ? Color.white : Socle.C.text))
                 Spacer(minLength: 4)
                 if count > 0 {
                     Text(L.number(count)).socle(Socle.T.caption).fontWeight(.semibold).foregroundStyle(.white)
+                        .monospacedDigit().contentTransition(.numericText(value: Double(count)))
                         .padding(.horizontal, 6).padding(.vertical, 1)
                         .background(Socle.C.brand, in: Capsule()).lineLimit(1).fixedSize()
                 }
             }
             .padding(.horizontal, 8).frame(height: 32)
-            .background(accent ? Socle.C.accentFill.opacity(hover ? 0.9 : 1) : selected ? Socle.C.control : hover ? Socle.C.surfaceHover : .clear, in: RoundedRectangle(cornerRadius: 6))
+            .background(accent ? Socle.C.accentFill.opacity(hover ? 0.9 : 1) : selected ? Socle.C.surfaceSelected : hover ? Socle.C.surfaceHover : .clear, in: RoundedRectangle(cornerRadius: 6))
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.13), value: hover)
+            .animation(reduceMotion ? nil : .snappy(duration: 0.2), value: count)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -464,7 +471,7 @@ struct CampaignPicker: View {
             HStack(spacing: 8) {
                 Circle().fill(Socle.C.brand).frame(width: 8, height: 8)
                 Text(store.hasCampaign ? store.campaign.name : L.t("campaign.none")).socle(Socle.T.labelStrong)
-                    .foregroundStyle(Socle.C.textStrong).lineLimit(1).truncationMode(.tail)
+                    .foregroundStyle(Socle.C.textStrong).lineLimit(1).truncationMode(.tail).help(store.hasCampaign ? store.campaign.name : "")
                 Spacer(minLength: 4)
                 if store.hasCampaign { Countdown(days: store.daysLeft(store.campaign)) }
                 Image(systemName: "chevron.up.chevron.down").font(.system(size: 9, weight: .semibold)).foregroundStyle(Socle.C.textSubtle)
@@ -496,7 +503,7 @@ struct StatusBar: View {
                 Text(stats).lineLimit(1)
             }
             Text("·").foregroundStyle(Socle.C.textDisabled)
-            Text(L.t("status.watch", store.data.watch.count)).lineLimit(1)
+            Text(L.n("status.watch", store.data.watch.count)).lineLimit(1)
             Spacer(minLength: Socle.M.space3)
             Text(L.t("rule.short")).lineLimit(1).truncationMode(.tail).foregroundStyle(Socle.C.textMuted)
         }

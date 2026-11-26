@@ -23,16 +23,20 @@ struct FeedbackView: View {
 
     var body: some View {
         SplitLayout {
+            if feedbackPosts.isEmpty {
+                if ui.query.trimmingCharacters(in: .whitespaces).isEmpty { ListEmpty(text: L.t("list.empty.feedback")) }
+                else { ListEmpty(text: L.t("list.empty.filtered")) { ui.query = "" } }
+            }
             ForEach(feedbackPosts) { p in
                 ItemRow(selected: p.id == selected, symbol: p.unreadFeedback > 0 ? "bubble.left.fill" : "bubble.left",
                         tint: p.unreadFeedback > 0 ? Socle.C.brand : Socle.C.textMuted, title: p.title,
                         meta: summary(p), metaColor: p.feedback.isEmpty ? Socle.C.textSubtle : Socle.C.warning, highlight: !p.feedback.isEmpty, action: { open(p.id) }) {
-                    if p.unreadFeedback > 0 { Badge(text: L.t("feedback.unread", p.unreadFeedback), kind: .accent) }
+                    if p.unreadFeedback > 0 { Badge(text: L.n("feedback.unread", p.unreadFeedback), kind: .accent) }
                     else { StatusBadge(status: p.status) }
                 }
             }
         } detail: {
-            if let id = selected, let p = store.post(id) { detail(p) } else { EmptyState(text: L.t("feedback.select")) }
+            if let id = selected, let p = store.post(id) { detail(p).fadeOnChange(p.id) } else { EmptyState(text: L.t("feedback.select")) }
         }
     }
 
@@ -49,8 +53,8 @@ struct FeedbackView: View {
     private func detail(_ p: Post) -> some View {
         VStack(alignment: .leading, spacing: Socle.M.space3) {
             HStack {
-                Text(p.title).socle(Socle.T.heading).foregroundStyle(Socle.C.textStrong).lineLimit(1)
-                Spacer()
+                Text(p.title).socle(Socle.T.heading).foregroundStyle(Socle.C.textStrong).lineLimit(1).truncationMode(.tail).help(p.title)
+                Spacer(minLength: 8)
                 if !p.link.isEmpty {
                     Button(L.t("action.open")) { openURL(p.link) }
                         .buttonStyle(SocleButtonStyle(.secondary, height: Socle.M.sizeControl)).fixedSize()
@@ -94,7 +98,7 @@ struct FeedbackView: View {
                 if let message { Text(message).socle(Socle.T.meta).foregroundStyle(Socle.C.success).lineLimit(1) }
                 Spacer()
                 Button(L.t("feedback.import")) {
-                    if let n = store.importFeedback(into: p.id) { message = L.t("feedback.imported", n) }
+                    if let n = store.importFeedback(into: p.id) { message = L.n("feedback.imported", n) }
                 }
                 .buttonStyle(SocleButtonStyle(.secondary, height: Socle.M.sizeControl)).fixedSize()
                 .help(L.t("feedback.csv.help"))
@@ -177,10 +181,15 @@ struct WatchView: View {
             }
             .padding(.horizontal, Socle.M.space3).padding(.bottom, Socle.M.space2)
             Divider().overlay(Socle.C.borderSubtle)
-            ForEach(store.data.watch.filter { ui.matches($0.name, $0.ref, $0.notes) }) { w in
+            let watched = store.data.watch.filter { ui.matches($0.name, $0.ref, $0.notes) }
+            if watched.isEmpty {
+                if ui.query.trimmingCharacters(in: .whitespaces).isEmpty { ListEmpty(text: L.t("list.empty.watch")) }
+                else { ListEmpty(text: L.t("list.empty.filtered")) { ui.query = "" } }
+            }
+            ForEach(watched) { w in
                 ItemRow(selected: w.id == selected, symbol: w.error != nil ? "exclamationmark.triangle" : w.isKeyword ? "text.magnifyingglass" : "shippingbox",
                         tint: w.error != nil ? Socle.C.warning : Socle.C.textMuted, title: w.name,
-                        meta: w.unreadMentions > 0 ? L.t("watch.reddit.new", w.unreadMentions) : w.latest?.version ?? L.t("watch.unchecked"),
+                        meta: w.unreadMentions > 0 ? L.n("watch.reddit.new", w.unreadMentions) : w.latest?.version ?? L.t("watch.unchecked"),
                         metaColor: w.unreadMentions > 0 ? Socle.C.warning : Socle.C.accentText,
                         highlight: w.unreadMentions > 0,
                         action: { selected = w.id }) { Badge(text: w.kind.label) }
@@ -201,10 +210,11 @@ struct WatchDetail: View {
         VStack(alignment: .leading, spacing: Socle.M.space3) {
             HStack(spacing: Socle.M.space2) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(item.name).socle(Socle.T.heading).foregroundStyle(Socle.C.textStrong)
+                    Text(item.name).socle(Socle.T.heading).foregroundStyle(Socle.C.textStrong).lineLimit(2).truncationMode(.tail).help(item.name)
                     Text("\(item.kind.label) · \(item.ref)").socle(Socle.T.monoSm).foregroundStyle(Socle.C.textSubtle)
+                        .lineLimit(1).truncationMode(.middle).help(item.ref)
                 }
-                Spacer()
+                Spacer(minLength: 8)
                 if let u = item.pageURL {
                     Button(L.t("action.open")) { Browser.openURL(u) }
                         .buttonStyle(SocleButtonStyle(.secondary, height: Socle.M.sizeControl)).fixedSize()
@@ -310,7 +320,7 @@ struct MentionList: View {
         if !m.author.isEmpty { parts.append("u/\(m.author)") }
         if let v = m.views { parts.append(L.t("watch.youtube.views", L.number(v))) }
         if let s = m.score { parts.append(yt ? "👍 \(L.number(s))" : "▲ \(L.number(s))") }
-        if let c = m.comments { parts.append(L.t("watch.reddit.comments", c)) }
+        if let c = m.comments { parts.append(L.n("watch.reddit.comments", c)) }
         return parts.joined(separator: " · ")
     }
 }
@@ -381,9 +391,14 @@ struct ChannelsView: View {
                 }
                 .buttonStyle(SocleButtonStyle(.secondary, height: Socle.M.sizeControl)).fixedSize()
             }
-            ForEach(store.data.channels.filter { ui.matches($0.name, $0.url, $0.notes) }) { c in
+            let shown = store.data.channels.filter { ui.matches($0.name, $0.url, $0.notes) }
+            if shown.isEmpty {
+                if ui.query.trimmingCharacters(in: .whitespaces).isEmpty { ListEmpty(text: L.t("list.empty.channels")) }
+                else { ListEmpty(text: L.t("list.empty.filtered")) { ui.query = "" } }
+            }
+            ForEach(shown) { c in
                 ItemRow(selected: c.id == selected, symbol: c.kind.symbol, title: c.name,
-                        meta: L.t("channel.uses", usage(c.id)), action: { selected = c.id })
+                        meta: L.n("channel.uses", usage(c.id)), action: { selected = c.id })
             }
         } detail: {
             if let id = selected, let i = store.data.channels.firstIndex(where: { $0.id == id }) { editor(i) }

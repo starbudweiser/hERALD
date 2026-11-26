@@ -92,6 +92,43 @@ struct EmptyState: View {
     }
 }
 
+/// Panneau de détail : le cadre reste immobile, seul le contenu s'estompe (150 ms) quand l'élément affiché change.
+/// Rien si « Réduire les animations » est actif.
+struct FadeOnChange<Key: Equatable>: ViewModifier {
+    let key: Key
+    @State private var opacity = 1.0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func body(content: Content) -> some View {
+        content.opacity(opacity)
+            .onChange(of: key) { _, _ in
+                guard !reduceMotion else { return }
+                opacity = 0
+                withAnimation(.easeOut(duration: 0.15)) { opacity = 1 }
+            }
+    }
+}
+
+extension View {
+    func fadeOnChange<Key: Equatable>(_ key: Key) -> some View { modifier(FadeOnChange(key: key)) }
+}
+
+/// Liste vide : message court et, quand une recherche ou un filtre est actif, bouton « Tout afficher ».
+struct ListEmpty: View {
+    let text: String
+    var showAll: (() -> Void)?
+    var body: some View {
+        VStack(spacing: Socle.M.space2) {
+            Text(text).socle(Socle.T.body).foregroundStyle(Socle.C.textSubtle).multilineTextAlignment(.center)
+            if let showAll {
+                Button(L.t("list.empty.show"), action: showAll)
+                    .buttonStyle(SocleButtonStyle(.secondary, height: Socle.M.sizeControl)).fixedSize()
+            }
+        }
+        .padding(Socle.M.space5).frame(maxWidth: .infinity)
+    }
+}
+
 /// Liste à gauche, détail à droite : deux panneaux arrondis.
 struct SplitLayout<List: View, Detail: View>: View {
     var width: CGFloat = 440
@@ -120,22 +157,18 @@ struct ItemRow<Trailing: View>: View {
     @ViewBuilder var trailing: Trailing
     @State private var hover = false
 
-    /// Bleu Socle : jamais de gris au survol.
-    private var pastel: Color { Socle.C.accent }
-    private var rowFill: Color {
-        if highlight { return pastel.opacity(selected ? 0.34 : hover ? 0.28 : 0.18) }
-        if selected { return Socle.C.surfaceSelected }
-        return hover ? pastel.opacity(0.10) : .clear
-    }
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// États neutres (règle Socle « États ») : survol = surface-hover, sélection = surface-selected, jamais de contour ni de fond d'accent.
+    private var rowFill: Color { selected ? Socle.C.surfaceSelected : hover ? Socle.C.surfaceHover : .clear }
 
     var body: some View {
         Button(action: action) {
             HStack(spacing: Socle.M.space2_5) {
-                Image(systemName: symbol).font(.system(size: 12)).foregroundStyle(tint)
+                Image(systemName: symbol).font(.system(size: 12)).foregroundStyle(highlight ? Socle.C.accentText : tint)
                     .frame(width: 26, height: 26).background(Socle.C.control, in: RoundedRectangle(cornerRadius: 6))
                     .accessibilityHidden(true)
                 Text(title).socle(Socle.T.labelStrong).foregroundStyle(Socle.C.textStrong).lineLimit(1).truncationMode(.tail)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .help(title).frame(maxWidth: .infinity, alignment: .leading)
                 if !meta.isEmpty {
                     Text(meta).socle(Socle.T.meta).foregroundStyle(metaColor).lineLimit(1).fixedSize()
                 }
@@ -144,7 +177,7 @@ struct ItemRow<Trailing: View>: View {
             .padding(.horizontal, Socle.M.space3)
             .frame(height: 46)
             .background(rowFill)
-            .overlay(alignment: .leading) { Rectangle().fill(selected ? Socle.C.brand : .clear).frame(width: 2) }
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.13), value: rowFill)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -165,14 +198,16 @@ struct ListRow<Content: View>: View {
     let action: () -> Void
     @ViewBuilder var content: Content
     @State private var hover = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
+        let fill = selected ? Socle.C.surfaceSelected : hover ? Socle.C.surfaceHover : Color.clear
         Button(action: action) {
             VStack(alignment: .leading, spacing: Socle.M.space1) { content }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, Socle.M.space3).padding(.vertical, Socle.M.space2_5)
-                .background(selected ? Socle.C.surfaceSelected : hover ? Socle.C.surfaceHover : .clear)
-                .overlay(alignment: .leading) { Rectangle().fill(selected ? Socle.C.accent : .clear).frame(width: 2) }
+                .background(fill)
+                .animation(reduceMotion ? nil : .easeOut(duration: 0.13), value: fill)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -225,3 +260,28 @@ struct CopyButton: View {
 
 /// Lien web : ouvert dans le navigateur intégré (⌥ enfoncé : navigateur du Mac).
 @MainActor func openURL(_ s: String) { Browser.open(s) }
+
+/// Fond d'état neutre pour une tuile ou une puce sélectionnable (règle Socle « États ») : repos `base`, survol
+/// surface-hover, sélection surface-selected, jamais de contour ni de teinte d'accent. Fondu de 130 ms, coupé si
+/// « Réduire les animations » est actif.
+struct StateFill: ViewModifier {
+    let selected: Bool
+    var base: Color = .clear
+    var radius: CGFloat = Socle.M.radius
+    @State private var hover = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func body(content: Content) -> some View {
+        let fill = selected ? Socle.C.surfaceSelected : hover ? Socle.C.surfaceHover : base
+        content
+            .background(fill, in: RoundedRectangle(cornerRadius: radius))
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.13), value: fill)
+            .onHover { hover = $0 }
+    }
+}
+
+extension View {
+    func stateFill(selected: Bool, base: Color = .clear, radius: CGFloat = Socle.M.radius) -> some View {
+        modifier(StateFill(selected: selected, base: base, radius: radius))
+    }
+}

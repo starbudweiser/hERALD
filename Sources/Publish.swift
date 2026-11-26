@@ -181,7 +181,7 @@ struct PublishPanel: View {
         return VStack(alignment: .leading, spacing: Socle.M.space1_5) {
             HStack(spacing: Socle.M.space2) {
                 Text(l.label).socle(Socle.T.labelStrong).foregroundStyle(Socle.C.textStrong)
-                Text(lim.map { "\(t.count) / \($0)" } ?? L.t("draft.chars", t.count))
+                Text(lim.map { "\(t.count) / \($0)" } ?? L.n("draft.chars", t.count))
                     .socle(Socle.T.meta).foregroundStyle(over ? Socle.C.danger : Socle.C.textSubtle).lineLimit(1)
                 if over, let lim {
                     Image(systemName: "exclamationmark.triangle.fill").font(.system(size: 11)).foregroundStyle(Socle.C.danger)

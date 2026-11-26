@@ -30,17 +30,21 @@ struct PlatformView: View {
         let published = all.filter { $0.status == .published }.count
         VStack(spacing: Socle.M.space3) {
             HStack(spacing: Socle.M.space3) {
-                kpi(L.t("platform.kpi.posts"), "\(all.count)", sub: L.t("platform.kpi.published", published))
+                kpi(L.t("platform.kpi.posts"), L.number(all.count), sub: L.n("platform.kpi.published", published))
                 kpi(L.t("stats.kpi.views"), L.number(views))
                 kpi(L.t("stats.kpi.interactions"), L.number(inter))
-                kpi(L.t("platform.kpi.feedback"), "\(all.reduce(0) { $0 + $1.feedback.count })",
-                    sub: L.t("feedback.unread", all.reduce(0) { $0 + $1.unreadFeedback }))
+                kpi(L.t("platform.kpi.feedback"), L.number(all.reduce(0) { $0 + $1.feedback.count }),
+                    sub: L.n("feedback.unread", all.reduce(0) { $0 + $1.unreadFeedback }))
             }
             .fixedSize(horizontal: false, vertical: true)
             SplitLayout(width: 480) {
                 if rows.isEmpty {
                     VStack(spacing: Socle.M.space3) {
-                        EmptyState(text: L.t(all.isEmpty ? "platform.empty.help" : "platform.empty", platform.label))
+                        if !all.isEmpty && !ui.query.trimmingCharacters(in: .whitespaces).isEmpty {
+                            ListEmpty(text: L.t("list.empty.filtered")) { ui.query = "" }
+                        } else {
+                            EmptyState(text: L.t(all.isEmpty ? "platform.empty.help" : "platform.empty", platform.label))
+                        }
                         if all.isEmpty {
                             Button(L.t("platform.empty.btn")) { ui.selectedPost = store.addPlatformPost(platform) }
                                 .buttonStyle(SocleButtonStyle(.primary, height: Socle.M.sizeControlLg)).fixedSize().disabled(!store.hasCampaign)
@@ -69,7 +73,7 @@ struct PlatformView: View {
             if let v = s.views { parts.append("👁 \(L.number(v))") }
             if s.interactions > 0 { parts.append("♥ \(L.number(s.interactions))") }
         }
-        if p.unreadFeedback > 0 { parts.append(L.t("feedback.unread", p.unreadFeedback)) }
+        if p.unreadFeedback > 0 { parts.append(L.n("feedback.unread", p.unreadFeedback)) }
         return parts.joined(separator: " · ")
     }
 
@@ -123,11 +127,10 @@ struct AddPlatformSheet: View {
                     Button { chosen = p } label: {
                         VStack(spacing: 6) {
                             Image(systemName: p.symbol).font(.system(size: 20)).foregroundStyle(p.color)
-                            Text(p.label).socle(Socle.T.label).foregroundStyle(Socle.C.text).lineLimit(1)
+                            Text(p.label).socle(Socle.T.label).foregroundStyle(Socle.C.text).lineLimit(1).truncationMode(.tail).help(p.label)
                         }
                         .frame(maxWidth: .infinity, minHeight: 64)
-                        .background(chosen == p ? Socle.C.surfaceSelected : Socle.C.control, in: RoundedRectangle(cornerRadius: Socle.M.radius))
-                        .overlay(RoundedRectangle(cornerRadius: Socle.M.radius).stroke(chosen == p ? Socle.C.accent : Color.clear, lineWidth: 1.5))
+                        .stateFill(selected: chosen == p, base: Socle.C.control)
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)

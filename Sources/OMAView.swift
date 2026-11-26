@@ -67,7 +67,7 @@ struct OMAView: View {
             kpi(L.t("oma.kpi.total"), apps.reduce(0) { $0 + $1.cumulative },
                 sub: L.t("oma.kpi.uniques", L.number(apps.reduce(0) { $0 + $1.cumulativeUniques })))
             kpi(L.t("stats.kpi.downloads"), apps.reduce(0) { $0 + ($1.downloads ?? 0) }, sub: L.t("oma.kpi.downloads.sub"))
-            kpi(L.t("oma.kpi.listed"), listed.count, sub: L.t("oma.kpi.featured", listed.filter(\.featured).count))
+            kpi(L.t("oma.kpi.listed"), listed.count, sub: L.n("oma.kpi.featured", listed.filter(\.featured).count))
         }
         .fixedSize(horizontal: false, vertical: true)
     }

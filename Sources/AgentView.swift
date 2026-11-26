@@ -294,7 +294,7 @@ struct AgentBubble: View {
             Text(L.t("agent.proposal").uppercased()).socle(Socle.T.eyebrow).foregroundStyle(Socle.C.warning)
             if !p.summary.isEmpty { Text(p.summary).socle(Socle.T.label).foregroundStyle(Socle.C.textStrong) }
             if message.applied != nil {
-                Text(L.t("agent.applied.count", message.undo?.count ?? 0)).socle(Socle.T.meta).foregroundStyle(Socle.C.textMuted)
+                Text(L.n("agent.applied.count", message.undo?.count ?? 0)).socle(Socle.T.meta).foregroundStyle(Socle.C.textMuted)
             } else if message.dismissed != true {
                 if items.isEmpty { Text(L.t("agent.proposal.empty")).socle(Socle.T.meta).foregroundStyle(Socle.C.textMuted) }
                 ForEach(items) { item in row(item, chosen: chosen.contains(item.id), all: Set(items.map(\.id))) }

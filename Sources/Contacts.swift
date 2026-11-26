@@ -56,7 +56,11 @@ struct ContactsView: View {
                     .padding(.horizontal, Socle.M.space3).padding(.bottom, Socle.M.space2)
             }
             Divider().overlay(Socle.C.borderSubtle)
-            if rows.isEmpty { Text(L.t("contact.none")).socle(Socle.T.body).foregroundStyle(Socle.C.textSubtle).padding(Socle.M.space4) }
+            if rows.isEmpty {
+                if !ui.query.trimmingCharacters(in: .whitespaces).isEmpty || filter != .all {
+                    ListEmpty(text: L.t("list.empty.filtered")) { ui.query = ""; filter = .all }
+                } else { ListEmpty(text: L.t("contact.none")) }
+            }
             ForEach(rows) { c in
                 let due = c.followUpDue()
                 ItemRow(selected: c.id == ui.selectedContact, symbol: c.kind.symbol, tint: due ? Socle.C.warning : Socle.C.textMuted,
@@ -76,7 +80,7 @@ extension ContactsView {
     fileprivate func scan() {
         let r = store.scanReplies()
         scanIsError = r.error != nil
-        scanNote = r.error.map { L.t("contact.scan.err", $0) } ?? (r.count > 0 ? L.t("contact.scan.done", r.count) : L.t("contact.scan.none"))
+        scanNote = r.error.map { L.t("contact.scan.err", $0) } ?? (r.count > 0 ? L.n("contact.scan.done", r.count) : L.t("contact.scan.none"))
     }
 }
 

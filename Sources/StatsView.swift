@@ -84,7 +84,7 @@ struct StatsView: View {
                 ForEach(s.missingLinks) { p in
                     HStack(spacing: Socle.M.space2) {
                         Image(systemName: store.platform(p).symbol).foregroundStyle(store.platform(p).color).frame(width: 18)
-                        Text("\(L.day(p.date)) · \(p.title)").socle(Socle.T.label).foregroundStyle(Socle.C.text).frame(width: 340, alignment: .leading).lineLimit(1)
+                        Text("\(L.day(p.date)) · \(p.title)").socle(Socle.T.label).foregroundStyle(Socle.C.text).frame(width: 340, alignment: .leading).lineLimit(1).truncationMode(.tail).help(p.title)
                         TextField("https://…", text: Binding(get: { pendingLinks[p.id] ?? "" }, set: { pendingLinks[p.id] = $0 })).socleField()
                         Button(L.t("action.add")) {
                             if var q = store.post(p.id) { q.link = (pendingLinks[p.id] ?? "").trimmingCharacters(in: .whitespaces); store.update(q) }
@@ -223,8 +223,8 @@ struct StatsView: View {
             HStack(spacing: Socle.M.space1_5) {
                 Image(systemName: r.platform.symbol).foregroundStyle(r.platform.color).frame(width: 18)
                 VStack(alignment: .leading, spacing: 0) {
-                    Text(r.post.title).socle(Socle.T.labelStrong).foregroundStyle(Socle.C.textStrong).lineLimit(1)
-                    Text("\(r.platform.label) · \(L.day(r.post.date))").socle(Socle.T.meta).foregroundStyle(Socle.C.textSubtle)
+                    Text(r.post.title).socle(Socle.T.labelStrong).foregroundStyle(Socle.C.textStrong).lineLimit(1).truncationMode(.tail).help(r.post.title)
+                    Text("\(r.platform.label) · \(L.day(r.post.date))").socle(Socle.T.meta).foregroundStyle(Socle.C.textSubtle).lineLimit(1)
                 }
                 if let e = r.post.statsError {
                     Image(systemName: "exclamationmark.triangle").foregroundStyle(Socle.C.warning).help(e)

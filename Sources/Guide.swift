@@ -26,10 +26,10 @@ struct GuideView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: Socle.M.space3) {
                 header
-                step(1, L.t("guide.s1"), L.t("guide.s1.sub", open.count - noText.count, open.count), done: noText.isEmpty) { s1 }
-                step(2, L.t("guide.s2"), L.t("guide.s2.sub", published.count, published.count + open.count), done: open.isEmpty) { s2 }
-                if !tasks.isEmpty { step(4, L.t("guide.tasks"), L.t("guide.tasks.sub", tasks.count), done: false) { s4 } }
-                step(3, L.t("guide.s3"), published.isEmpty ? L.t("guide.s3.off") : L.t("guide.s3.sub", published.count), done: false, off: published.isEmpty) { s3 }
+                step(1, L.t("guide.s1"), L.n("guide.s1.sub", open.count - noText.count, open.count), done: noText.isEmpty) { s1 }
+                step(2, L.t("guide.s2"), L.n("guide.s2.sub", published.count, published.count + open.count), done: open.isEmpty) { s2 }
+                if !tasks.isEmpty { step(4, L.t("guide.tasks"), L.n("guide.tasks.sub", tasks.count), done: false) { s4 } }
+                step(3, L.t("guide.s3"), published.isEmpty ? L.t("guide.s3.off") : L.n("guide.s3.sub", published.count), done: false, off: published.isEmpty) { s3 }
             }
             .padding(Socle.M.space4).frame(maxWidth: 760).frame(maxWidth: .infinity)
         }
@@ -63,18 +63,20 @@ struct GuideView: View {
                         else if n == 4 { Image(systemName: "checklist").font(.system(size: 11, weight: .bold)).foregroundStyle(Socle.C.onAccentFill) }
                         else { Text("\(n)").socle(Socle.T.labelStrong).foregroundStyle(Socle.C.onAccentFill) }
                     }
-                    Text(title).socle(Socle.T.heading).foregroundStyle(Socle.C.textStrong)
+                    Text(title).socle(Socle.T.heading).foregroundStyle(Socle.C.textStrong).lineLimit(1).truncationMode(.tail)
                     Spacer(minLength: 8)
-                    Text(sub).socle(Socle.T.meta).foregroundStyle(Socle.C.textMuted).lineLimit(1)
-                    Image(systemName: isOpen ? "chevron.up" : "chevron.down").font(.system(size: 10)).foregroundStyle(Socle.C.textSubtle)
+                    Text(sub).socle(Socle.T.meta).foregroundStyle(Socle.C.textMuted).lineLimit(1).truncationMode(.tail).help(sub)
+                    Image(systemName: isOpen ? "chevron.up" : "chevron.down").font(.system(size: 10)).foregroundStyle(Socle.C.textSubtle).fixedSize()
                 }
+                .padding(.horizontal, Socle.M.space2).padding(.vertical, Socle.M.space1_5)
+                .stateFill(selected: isOpen && !done)
+                .padding(.horizontal, -Socle.M.space2).padding(.vertical, -Socle.M.space1_5)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             if isOpen { content() }
         }
         .padding(Socle.M.space3).frame(maxWidth: .infinity, alignment: .leading).soclePanel()
-        .overlay(RoundedRectangle(cornerRadius: Socle.M.radius).stroke(isOpen && !done ? Socle.C.accent : Color.clear, lineWidth: 1.5))
         .opacity(off && !isOpen ? 0.6 : 1)
     }
 
@@ -82,7 +84,7 @@ struct GuideView: View {
         HStack(spacing: Socle.M.space3) {
             Image(systemName: store.channel(p.channelID)?.kind.symbol ?? "megaphone").frame(width: 20).foregroundStyle(Socle.C.textMuted)
             VStack(alignment: .leading, spacing: 1) {
-                Text(p.title).socle(Socle.T.body).foregroundStyle(Socle.C.textStrong).lineLimit(1)
+                Text(p.title).socle(Socle.T.body).foregroundStyle(Socle.C.textStrong).lineLimit(1).truncationMode(.tail).help(p.title)
                 Text(L.day(p.date)).socle(Socle.T.meta).foregroundStyle(Calendar.current.startOfDay(for: p.date) < Calendar.current.startOfDay(for: Date()) && p.status != .published ? Socle.C.danger : Socle.C.textSubtle)
             }
             Spacer(minLength: 8)
@@ -110,7 +112,7 @@ struct GuideView: View {
             HStack(spacing: Socle.M.space3) {
                 Image(systemName: "checklist").frame(width: 20).foregroundStyle(Socle.C.textMuted)
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(p.title).socle(Socle.T.body).foregroundStyle(Socle.C.textStrong).lineLimit(1)
+                    Text(p.title).socle(Socle.T.body).foregroundStyle(Socle.C.textStrong).lineLimit(1).truncationMode(.tail).help(p.title)
                     Text(L.day(p.date)).socle(Socle.T.meta).foregroundStyle(Calendar.current.startOfDay(for: p.date) < Calendar.current.startOfDay(for: Date()) ? Socle.C.danger : Socle.C.textSubtle)
                 }
                 Spacer(minLength: 8)
@@ -125,7 +127,7 @@ struct GuideView: View {
     @ViewBuilder private var s3: some View {
         if unread > 0 {
             HStack {
-                Text(L.t("guide.unread", unread)).socle(Socle.T.body).foregroundStyle(Socle.C.textStrong)
+                Text(L.n("guide.unread", unread)).socle(Socle.T.body).foregroundStyle(Socle.C.textStrong)
                 Spacer(minLength: 8)
                 Button(L.t("guide.feedback")) { ui.tab = .feedback }
                     .buttonStyle(SocleButtonStyle(.primary, height: Socle.M.sizeControl)).fixedSize()
@@ -203,7 +205,7 @@ struct GuidedPostSheet: View {
             HStack {
                 SocleSegmented(options: Lang.allCases, selection: lang, label: { $0.label }, onSelect: { lang = $0 })
                 Spacer(minLength: 0)
-                Text(L.t("draft.chars", text.wrappedValue.count)).socle(Socle.T.meta).foregroundStyle(Socle.C.textSubtle)
+                Text(L.n("draft.chars", text.wrappedValue.count)).socle(Socle.T.meta).foregroundStyle(Socle.C.textSubtle)
             }
             TextEditor(text: text).socle(Socle.T.reading).socleField(multiline: true).frame(height: 280)
                 .overlay {

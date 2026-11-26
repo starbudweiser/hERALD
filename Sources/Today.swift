@@ -37,7 +37,7 @@ extension Store {
             }
         }
         for p in posts where p.unreadFeedback > 0 {
-            out.append(TodoItem(kind: .feedback, postID: p.id, title: p.title, meta: L.t("feedback.unread", p.unreadFeedback)))
+            out.append(TodoItem(kind: .feedback, postID: p.id, title: p.title, meta: L.n("feedback.unread", p.unreadFeedback)))
         }
         out += contactTodos(now: now)
         return out
@@ -65,6 +65,7 @@ struct TodayView: View {
     @EnvironmentObject var store: Store
     @EnvironmentObject var ui: UIState
     @State private var selected: TodoItem.ID?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         let items = store.todoItems().filter { ui.matches($0.title, $0.meta) }
@@ -79,8 +80,11 @@ struct TodayView: View {
             }
             .fixedSize(horizontal: false, vertical: true)
             SplitLayout(width: 520) {
-                SectionBar(title: L.t("today.todo")) { Text("\(items.count)").socle(Socle.T.meta).foregroundStyle(Socle.C.textSubtle) }
-                if items.isEmpty { Text(L.t("today.none")).socle(Socle.T.body).foregroundStyle(Socle.C.textSubtle).padding(Socle.M.space4) }
+                SectionBar(title: L.t("today.todo")) { Text(L.number(items.count)).socle(Socle.T.meta).foregroundStyle(Socle.C.textSubtle).monospacedDigit() }
+                if items.isEmpty {
+                    if ui.query.trimmingCharacters(in: .whitespaces).isEmpty { ListEmpty(text: L.t("today.none")) }
+                    else { ListEmpty(text: L.t("list.empty.filtered")) { ui.query = "" } }
+                }
                 ForEach(items) { it in
                     ItemRow(selected: it.id == selected, symbol: it.symbol,
                             tint: it.urgent ? Socle.C.brand : Socle.C.textMuted, title: it.title, meta: it.meta,
@@ -116,7 +120,7 @@ struct TodayView: View {
                 Image(systemName: "chevron.right").foregroundStyle(Socle.C.textDisabled)
                 step(2, L.t("cycle.publish"), ready, L.t("cycle.publish.sub"), warn: false) { ui.tab = .posts }
                 Image(systemName: "chevron.right").foregroundStyle(Socle.C.textDisabled)
-                step(3, L.t("cycle.listen"), listening.count, unread > 0 ? L.t("cycle.listen.unread", unread) : L.t("cycle.listen.sub"), warn: false) { ui.tab = .feedback }
+                step(3, L.t("cycle.listen"), listening.count, unread > 0 ? L.n("cycle.listen.unread", unread) : L.t("cycle.listen.sub"), warn: false) { ui.tab = .feedback }
             }
             .fixedSize(horizontal: false, vertical: true)
             Text(L.t("cycle.hint")).socle(Socle.T.meta).foregroundStyle(Socle.C.textSubtle)
@@ -129,11 +133,12 @@ struct TodayView: View {
                 Text("\(n)").socle(Socle.T.labelStrong).foregroundStyle(Socle.C.onAccentFill)
                     .frame(width: 24, height: 24).background(Socle.C.accentFill, in: Circle())
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(title.uppercased()).socle(Socle.T.eyebrow).foregroundStyle(Socle.C.textSubtle)
-                    Text(sub).socle(Socle.T.meta).foregroundStyle(warn ? Socle.C.danger : Socle.C.textSubtle).lineLimit(1)
+                    Text(title.uppercased()).socle(Socle.T.eyebrow).foregroundStyle(Socle.C.textSubtle).lineLimit(1)
+                    Text(sub).socle(Socle.T.meta).foregroundStyle(warn ? Socle.C.danger : Socle.C.textSubtle).lineLimit(1).truncationMode(.tail).help(sub)
                 }
                 Spacer(minLength: 0)
-                Text("\(count)").socle(Socle.T.stat).foregroundStyle(Socle.C.textStrong)
+                Text(L.number(count)).socle(Socle.T.stat).foregroundStyle(Socle.C.textStrong).lineLimit(1).fixedSize().monospacedDigit()
+                    .contentTransition(.numericText(value: Double(count))).animation(reduceMotion ? nil : .snappy(duration: 0.2), value: count)
             }
             .padding(Socle.M.space3).frame(maxWidth: .infinity, alignment: .leading).soclePanel().contentShape(Rectangle())
         }
@@ -172,7 +177,7 @@ struct TodayView: View {
             ForEach(Array(upcomingMilestones.prefix(3))) { m in
                 HStack(spacing: Socle.M.space3) {
                     Text(L.day(m.date)).socle(Socle.T.meta).foregroundStyle(Socle.C.textMuted).frame(width: 90, alignment: .leading)
-                    Text(m.title).socle(Socle.T.labelStrong).foregroundStyle(Socle.C.textStrong).lineLimit(1)
+                    Text(m.title).socle(Socle.T.labelStrong).foregroundStyle(Socle.C.textStrong).lineLimit(1).truncationMode(.tail).help(m.title)
                     Spacer(minLength: 0)
                     Badge(text: m.kind.label)
                 }

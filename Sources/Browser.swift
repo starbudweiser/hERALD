@@ -206,13 +206,13 @@ struct TabChip: View {
     var body: some View {
         HStack(spacing: 6) {
             Text(tab.title.isEmpty ? (tab.url?.host ?? L.t("browser.newtab")) : tab.title)
-                .socle(Socle.T.meta).lineLimit(1).frame(maxWidth: 160)
+                .socle(Socle.T.meta).lineLimit(1).truncationMode(.middle).frame(maxWidth: 160)
             Button { model.close(tab.id) } label: { Image(systemName: "xmark").font(.system(size: 9, weight: .bold)) }
                 .buttonStyle(.plain).accessibilityLabel(L.t("browser.closetab"))
         }
         .foregroundStyle(selected ? Socle.C.textStrong : Socle.C.textMuted)
         .padding(.horizontal, Socle.M.space2).frame(height: 26)
-        .background(selected ? Socle.C.control : Socle.C.bgSunken, in: RoundedRectangle(cornerRadius: Socle.M.radius))
+        .stateFill(selected: selected, base: Socle.C.bgSunken)
         .contentShape(Rectangle())
         .onTapGesture { model.selected = tab.id }
     }

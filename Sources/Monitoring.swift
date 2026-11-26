@@ -20,7 +20,7 @@ extension Store {
         let linked = hasCampaign ? posts.filter { !$0.link.isEmpty } : []
         let auto = linked.filter { platform($0).automatic }
         let errors = auto.filter { $0.statsError != nil }.count
-        var d = L.t("mon.stats.detail", auto.count, linked.count - auto.count, L.t(campaignActive ? "mon.every.hour" : "mon.every.day"))
+        var d = L.n("mon.stats.detail", auto.count, linked.count - auto.count, L.t(campaignActive ? "mon.every.hour" : "mon.every.day"))
         d += " · " + (data.statsChecked.map { L.t("mon.last", L.date($0)) } ?? L.t("mon.never"))
         if errors > 0 { d += " · " + L.t("mon.errors", errors) }
         out.append(MonitorLine(symbol: "chart.bar", title: L.t("mon.stats"), detail: d, state: errors > 0 ? .warn : (auto.isEmpty ? .off : .ok)))
@@ -51,7 +51,7 @@ extension Store {
         for w in data.watch {
             var s = w.kind.label + (w.ref.isEmpty ? "" : " · " + w.ref)
             s += " · " + (w.lastChecked.map { L.t("mon.last", L.date($0)) } ?? L.t("mon.never"))
-            if w.unreadMentions > 0 { s += " · " + L.t("mon.unread", w.unreadMentions) }
+            if w.unreadMentions > 0 { s += " · " + L.n("mon.unread", w.unreadMentions) }
             if let e = w.error { s += " · " + e }
             let late = !w.isKeyword && (w.lastChecked ?? .distantPast) < now.addingTimeInterval(-2 * 86400)
             out.append(MonitorLine(symbol: "binoculars", title: w.name.isEmpty ? w.ref : w.name, detail: s, state: (w.error != nil || late) ? .warn : .ok))
@@ -59,7 +59,7 @@ extension Store {
 
         // OpenMacApps
         if let o = data.oma {
-            var s = L.t("mon.oma.detail", o.apps.count)
+            var s = L.n("mon.oma.detail", o.apps.count)
             s += " · " + (o.checked.map { L.t("mon.last", L.date($0)) } ?? L.t("mon.never"))
             if let e = o.error { s += " · " + e }
             out.append(MonitorLine(symbol: "storefront", title: "OpenMacApps", detail: s, state: o.error == nil ? .ok : .warn))
@@ -108,7 +108,7 @@ struct MonitorPanel: View {
                             HStack(alignment: .top, spacing: Socle.M.space3) {
                                 Image(systemName: l.symbol).frame(width: 18).foregroundStyle(Socle.C.textMuted)
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text(l.title).socle(Socle.T.labelStrong).foregroundStyle(Socle.C.textStrong)
+                                    Text(l.title).socle(Socle.T.labelStrong).foregroundStyle(Socle.C.textStrong).lineLimit(2).truncationMode(.tail).help(l.title)
                                     Text(l.detail).socle(Socle.T.meta).foregroundStyle(Socle.C.textSubtle).fixedSize(horizontal: false, vertical: true)
                                 }
                                 Spacer(minLength: 8)

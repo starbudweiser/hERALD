@@ -422,5 +422,20 @@ check(StatPlatform.detect(link: "https://www.nexusmods.com/skyrimspecialedition/
 check(StatPlatform.detect(link: "https://www.nexusmods.com/skyrimspecialedition/articles/12615", channel: nil, site: "") == .nexusPage
       && StatPlatform.detect(link: "https://forums.nexusmods.com/topic/1-x/", channel: nil, site: "") == .nexusPage && !StatPlatform.nexusPage.automatic, "article et forum Nexus manuels")
 
+// Textes : mêmes clés dans les 4 langues, plus aucun pluriel « (s) » ni « x/i », singulier et pluriel via L.n
+let frKeys = Set(L.tables["fr"]!.keys)
+for code in ["en", "es", "it"] {
+    let keys = Set(L.tables[code]!.keys)
+    check(keys == frKeys, "mêmes clés en \(code) : écart \(keys.symmetricDifference(frKeys).sorted().prefix(5))")
+}
+for (code, table) in L.tables {
+    let bad = table.filter { $0.value.range(of: #"\((s|es|ies|i|e)\)|\w/[ie]\b"#, options: .regularExpression) != nil }.keys.sorted()
+    check(bad.isEmpty, "pluriel « (s) » ou « x/i » restant en \(code) : \(bad.prefix(5))")
+}
+let one = L.n("side.inbox.n", 1), many = L.n("side.inbox.n", 1284)
+check(one != many && !one.contains("%") && !many.contains("%"), "L.n : singulier et pluriel distincts, sans %")
+check(many.contains(L.number(1284)), "L.n : nombre formaté selon la langue")
+check(L.n("mon.stats.detail", 2, 3, "x").contains("3"), "L.n : arguments suivants conservés")
+
 print(failures == 0 ? "OK : tous les tests passent" : "\(failures) échec(s)")
 exit(failures == 0 ? 0 : 1)

@@ -139,7 +139,7 @@ extension Store {
             list.sort { $0.date > $1.date }
             if list.count > 300 { list.removeLast(list.count - 300) }
             data.watch[i].mentions = list
-            data.watch[i].history.append(WatchSnapshot(version: L.t(item.kind == .youtube ? "watch.youtube.count" : "watch.reddit.count", list.count),
+            data.watch[i].history.append(WatchSnapshot(version: L.n(item.kind == .youtube ? "watch.youtube.count" : "watch.reddit.count", list.count),
                                                        title: list.first?.title ?? ""))
             if data.watch[i].history.count > 200 { data.watch[i].history.removeFirst() }
             return fresh
